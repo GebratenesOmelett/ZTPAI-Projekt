@@ -47,7 +47,7 @@ public class PropertyQueryService {
         return unique.stream().map(id -> details(id, currentUserId)).toList();
     }
 
-    PropertyDetailsDto toDetails(Property p, Long currentUserId) {
+    public PropertyDetailsDto toDetails(Property p, Long currentUserId) {
         List<Offer> offers = offerRepository.findByPropertyIdOrderByPriceAsc(p.getId());
         Offer representative = offers.stream().filter(Offer::isActive).findFirst().orElse(offers.isEmpty() ? null : offers.getFirst());
         LinkedHashSet<String> photos = new LinkedHashSet<>();

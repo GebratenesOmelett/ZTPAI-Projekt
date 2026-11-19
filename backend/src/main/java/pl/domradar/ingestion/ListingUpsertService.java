@@ -49,6 +49,19 @@ public class ListingUpsertService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Outcome upsert(Long jobId, Long sourceId, NormalizedListing listing) {
+        return doUpsert(jobId, sourceId, listing, null, true);
+    }
+
+    /**
+     * Ręczne dodanie oferty przez administratora (w bieżącej transakcji): do wskazanej nieruchomości,
+     * przez deduplikację ({@code allowMerge}) albo zawsze jako nowa nieruchomość.
+     */
+    @Transactional
+    public Outcome addManual(Long sourceId, NormalizedListing listing, Long targetPropertyId, boolean allowMerge) {
+        return doUpsert(null, sourceId, listing, targetPropertyId, allowMerge);
+    }
+
+    private Outcome doUpsert(Long jobId, Long sourceId, NormalizedListing listing, Long targetPropertyId, boolean allowMerge) {
         Instant now = clock.instant();
         Optional<Offer> existing = offerRepository.findBySourceIdAndExternalId(sourceId, listing.externalId());
         Property property;
@@ -65,9 +78,11 @@ public class ListingUpsertService {
             }
             outcome = Outcome.UPDATED;
         } else {
-            Optional<DeduplicationService.Match> match = deduplicationService.findMatch(listing, sourceId);
-            if (match.isPresent()) {
-                property = propertyRepository.findById(match.get().propertyId()).orElseThrow();
+            Optional<Long> matchedId = targetPropertyId != null ? Optional.of(targetPropertyId)
+                    : allowMerge ? deduplicationService.findMatch(listing, sourceId).map(DeduplicationService.Match::propertyId)
+                    : Optional.empty();
+            if (matchedId.isPresent()) {
+                property = propertyRepository.findById(matchedId.get()).orElseThrow();
                 enrich(property, listing);
                 outcome = Outcome.MERGED;
             } else {

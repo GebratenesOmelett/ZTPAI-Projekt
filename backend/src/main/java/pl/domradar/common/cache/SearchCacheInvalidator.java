@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionalEventListener;
 import pl.domradar.common.config.CacheConfig;
 
 import java.util.Optional;
@@ -26,5 +27,11 @@ public class SearchCacheInvalidator {
             }
         }
         log.debug("Search caches invalidated");
+    }
+
+    @TransactionalEventListener(fallbackExecution = true)
+    public void onSearchDataChanged(SearchDataChangedEvent event) {
+        log.debug("Invalidating search caches: {}", event.reason());
+        invalidateAll();
     }
 }
