@@ -641,6 +641,6 @@ Kafelki mapy pochodzą z OpenStreetMap (zgodnie z polityką użytkowania kafelk�
 
 | Wymaganie | Realizacja |
 |---|---|
-| Repozytorium GitHub + wskazany commit/tag | wersja do oceny oznaczona tagiem `v1.0.0` |
+| Repozytorium GitHub + wskazany commit/tag | https://github.com/GebratenesOmelett/ZTPAI-Projekt — wersja do oceny oznaczona tagiem `v1.1.1` |
 | Historia commitów | commity etapami w konwencji Conventional Commits (`git log --oneline`) |
 | README: opis, technologie, uruchomienie, funkcjonalności, ERD, dokumentacja API | sekcje powyżej |
