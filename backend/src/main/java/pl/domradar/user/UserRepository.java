@@ -16,6 +16,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     long countByRoleAndEnabledTrue(Role role);
 
+    long countByRole(Role role);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from User u where u.id = :id")
+    Optional<User> findByIdForUpdate(@Param("id") Long id);
+
     @Query("""
             select u from User u
             where (:q is null or lower(u.email) like lower(concat('%', cast(:q as string), '%'))

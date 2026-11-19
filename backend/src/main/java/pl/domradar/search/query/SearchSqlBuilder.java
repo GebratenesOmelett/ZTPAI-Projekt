@@ -58,6 +58,12 @@ public final class SearchSqlBuilder {
         return params;
     }
 
+    /** Dodatkowy warunek: nieruchomości, które pojawiły się po wskazanej chwili (dzienny digest). */
+    public SearchSqlBuilder firstSeenAfter(java.time.Instant since) {
+        add("p.first_seen_at > " + param("since", java.sql.Timestamp.from(since)));
+        return this;
+    }
+
     public boolean hasRelevance() {
         return text.hasPositiveTerms();
     }

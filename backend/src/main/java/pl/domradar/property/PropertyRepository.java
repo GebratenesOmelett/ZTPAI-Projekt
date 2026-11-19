@@ -27,6 +27,9 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
     Page<Property> adminSearch(@Param("q") String q, @Param("status") PropertyStatus status,
                                @Param("cityId") Long cityId, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"city", "district"})
+    List<Property> findByIdIn(java.util.Collection<Long> ids);
+
     List<Property> findByFingerprint(String fingerprint);
 
     long countByStatus(PropertyStatus status);

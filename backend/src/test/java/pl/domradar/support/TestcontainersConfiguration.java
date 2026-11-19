@@ -31,6 +31,12 @@ public class TestcontainersConfiguration {
         return new RabbitMQContainer(DockerImageName.parse("rabbitmq:4.1-management"));
     }
 
+    /** Wspólny mock serwera SMTP dla wszystkich testów (jeden kontekst Springa = jeden zestaw kontenerów). */
+    @Bean
+    org.springframework.mail.javamail.JavaMailSender javaMailSender() {
+        return org.mockito.Mockito.mock(org.springframework.mail.javamail.JavaMailSender.class);
+    }
+
     @Bean
     @ServiceConnection(name = "redis")
     GenericContainer<?> redisContainer() {

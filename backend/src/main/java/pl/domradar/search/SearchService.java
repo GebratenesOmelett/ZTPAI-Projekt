@@ -55,6 +55,19 @@ public class SearchService {
         return new MapPointsResponse(points, total, total > points.size());
     }
 
+    public record NewMatches(long total, List<PropertySummaryDto> top) {
+    }
+
+    /** Nowe nieruchomości (pojawiły się po {@code since}) spełniające kryteria — dla dziennego digestu. */
+    @Transactional(readOnly = true)
+    public NewMatches newMatchesSince(SearchCriteria criteria, java.time.Instant since, int limit) {
+        SearchSqlBuilder builder = SearchSqlBuilder.from(criteria).firstSeenAfter(since);
+        long total = repository.count(builder);
+        List<PropertySummaryDto> top = total == 0 ? List.of()
+                : repository.page(builder, SortSpec.parse(List.of("addedAt,desc")), limit, 0);
+        return new NewMatches(total, top);
+    }
+
     /** Które z podanych nieruchomości spełniają kryteria (dopasowanie alertów do zapisanych wyszukiwań). */
     @Transactional(readOnly = true)
     public List<Long> matchingIds(SearchCriteria criteria, Collection<Long> propertyIds) {
