@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<title>Syntetyczna strona wyników (schema.org)</title>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"ItemList","itemListElement":[
+  {"@type":"ListItem","position":1,"item":{"@type":"Offer","name":"Mieszkanie na sprzedaż, 52 m² Testowo, Próbna",
+    "url":"https://portal.example/oferta/sprzedaz-mieszkanie-warszawa-testowo-mzn1000001",
+    "price":"700000","priceCurrency":"PLN","image":["https://img.example/1.jpg","https://img.example/2.jpg"],
+    "itemOffered":{"@type":"Apartment","numberOfRooms":3,"floorLevel":"2","floorSize":{"@type":"QuantitativeValue","value":"52.40"},
+      "address":{"@type":"PostalAddress","addressLocality":"Mokotów","streetAddress":"Próbna"},
+      "description":"Mieszkanie bez pośredników, kontakt 601 234 567"}}},
+  {"@type":"ListItem","position":2,"item":{"@type":"Offer","name":"Mieszkanie do wynajęcia, 40 m² Inne",
+    "url":"https://portal.example/oferta/wynajem-mieszkanie-warszawa-mzn1000002","price":"","priceCurrency":"PLN",
+    "itemOffered":{"@type":"Apartment","floorSize":{"@type":"QuantitativeValue","value":"40"}}}}
+]}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"RealEstateListing","name":"Mieszkanie trzypokojowe na sprzedaż: Warszawa Wola: Testowa",
+  "url":"https://portal.example/nieruchomosci/sprzedam-mieszkanie-warszawa-wola-testowa-60m2/2000002",
+  "offers":{"@type":"Offer","price":"900000.0","priceCurrency":"PLN","seller":{"@type":"Organization","name":"Biuro Przykładowe"},
+    "itemOffered":{"@type":"Apartment","numberOfRooms":3,"floorSize":{"value":"60.0"},
+      "address":{"@type":"PostalAddress","addressLocality":"Warszawa","streetAddress":"Testowa"}}}}
+</script>
+<script type="application/ld+json">{ niepoprawny json </script>
+</head>
+<body></body>
+</html>

@@ -1,7 +1,7 @@
 # DomRadar — agregator ogłoszeń nieruchomości
 
-DomRadar to jedna wyszukiwarka ogłoszeń zebranych z wielu portali (Otodom, Morizon, Gratka, OLX,
-Nieruchomości-online). To samo mieszkanie wystawione na kilku portalach jest pokazywane jako
+DomRadar to jedna wyszukiwarka ogłoszeń zebranych z wielu portali (Otodom, OLX, Morizon, Gratka,
+Nieruchomości-online, Domiporta, GetHome, Szybko.pl, Adresowo, Sprzedajemy.pl, Trojmiasto.pl). To samo mieszkanie wystawione na kilku portalach jest pokazywane jako
 **jedna nieruchomość z listą ofert** (portal, cena, link). Główne zalety względem samych portali:
 
 - dużo bardziej zaawansowane wyszukiwanie, filtrowanie i sortowanie (pełnotekstowe po polsku z
@@ -12,8 +12,8 @@ Nieruchomości-online). To samo mieszkanie wystawione na kilku portalach jest po
 
 Projekt zaliczeniowy z przedmiotu ZTPAI (aplikacja webowa: backend + REST API + frontend + baza danych).
 
-> **Źródła danych:** prawdziwe ogłoszenia z **Otodom** i **OLX** (adaptery live, włączane zmienną
-> `LIVE_SOURCES_ENABLED`) oraz — do pracy offline i testów — dane syntetyczne (`DEMO_DATA_ENABLED`).
+> **Źródła danych:** prawdziwe ogłoszenia z **11 portali** (adaptery live, włączane zmienną
+> `LIVE_SOURCES_ENABLED`, lista w [Źródła danych](#źródła-danych)) oraz — do pracy offline i testów — dane syntetyczne (`DEMO_DATA_ENABLED`).
 > Przed włączeniem pobierania z portali przeczytaj [Aspekt prawny źródeł danych](#aspekt-prawny-źródeł-danych).
 
 ---
@@ -28,9 +28,10 @@ Projekt zaliczeniowy z przedmiotu ZTPAI (aplikacja webowa: backend + REST API + 
 6. [Architektura i przepływ asynchroniczny](#architektura-i-przepływ-asynchroniczny)
 7. [Reguły biznesowe](#reguły-biznesowe)
 8. [Testy](#testy)
-9. [Aspekt prawny źródeł danych](#aspekt-prawny-źródeł-danych)
-10. [Decyzje projektowe](#decyzje-projektowe)
-11. [Wymagania z regulaminu → realizacja w kodzie](#wymagania-z-regulaminu--realizacja-w-kodzie)
+9. [Źródła danych](#źródła-danych)
+10. [Aspekt prawny źródeł danych](#aspekt-prawny-źródeł-danych)
+11. [Decyzje projektowe](#decyzje-projektowe)
+12. [Wymagania z regulaminu → realizacja w kodzie](#wymagania-z-regulaminu--realizacja-w-kodzie)
 
 ---
 
@@ -67,11 +68,11 @@ Przy pierwszym starcie (pusta baza) backend automatycznie uruchamia import ze ws
 
 | Tryb (`.env`) | Co się dzieje | Wynik po starcie |
 |---|---|---|
-| `LIVE_SOURCES_ENABLED=true`, `DEMO_DATA_ENABLED=false` (domyślnie w `.env.example`) | pobranie najnowszych ogłoszeń z Otodom i OLX (6 miast × sprzedaż/wynajem, `LIVE_MAX_PAGES` stron) | po ok. 3 min ~2000 prawdziwych ofert, ~1900 nieruchomości |
+| `LIVE_SOURCES_ENABLED=true`, `DEMO_DATA_ENABLED=false` (domyślnie w `.env.example`) | pobranie najnowszych ogłoszeń z 11 portali (6 miast × sprzedaż/wynajem, `LIVE_MAX_PAGES` stron; importy kolejno, każdy 1–2 min) | po ok. 15 min ~8800 prawdziwych ofert, ~6700 nieruchomości (~1500 z ofertami z kilku portali) |
 | `LIVE_SOURCES_ENABLED=false`, `DEMO_DATA_ENABLED=true` | dane syntetyczne, działa bez internetu | po ok. 1 min ~1250 nieruchomości z ~2500 ofert |
 
 Ogłoszenia są zapisywane w bazie PostgreSQL (wolumen `pgdata`) — wejście na stronę nie łączy się z portalami,
-wyszukiwarka czyta wyłącznie z bazy. Kolejne importy uruchamia scheduler **raz dziennie** (Otodom 4:00, OLX 4:30;
+wyszukiwarka czyta wyłącznie z bazy. Kolejne importy uruchamia scheduler **raz dziennie** (w nocy, od 4:00 do 7:40 co 20–30 min dla kolejnych portali;
 pominięty import jest nadrabiany po starcie aplikacji) lub admin przyciskiem „Importuj”. Godzinę można zmienić
 w panelu admina (harmonogram cron źródła). Uwaga: `docker compose down -v` usuwa wolumen z bazą — wtedy
 przy następnym starcie dane zostaną pobrane od nowa.
@@ -105,7 +106,7 @@ Można też założyć własne konto przez formularz rejestracji.
 3. Otwórz nieruchomość z oznaczeniem „2 portale” — zobaczysz oferty z obu portali, wykres historii cen i
    porównanie do mediany dzielnicy.
 4. Zaloguj się jako użytkownik, zapisz wyszukiwanie z alertem **INSTANT**.
-5. Zaloguj się jako admin (np. w drugiej przeglądarce), w „Panel admina → Źródła” kliknij „Importuj” przy Otodom lub OLX.
+5. Zaloguj się jako admin (np. w drugiej przeglądarce), w „Panel admina → Źródła” kliknij „Importuj” przy dowolnym portalu (np. Otodom).
    W zakładce „Importy” postęp aktualizuje się na żywo. Nowe ogłoszenia pasujące do wyszukiwania z alertem
    dają użytkownikowi toast + powiadomienie w dzwonku, a e-mail trafia do Mailpit. (W trybie demo kolejne importy
    symulują też zmiany cen i znikające ogłoszenia.)
@@ -475,9 +476,9 @@ Po zakończonym imporcie odświeżane są mediany dzielnic (`district_price_stat
 
 ## Testy
 
-- **Backend: 125 testów** (`./mvnw verify`):
-  - 19 klas testów jednostkowych (JUnit 5, Mockito, AssertJ): harmonogram importów, parsowanie odpowiedzi Otodom i OLX
-    (syntetyczne fikstury), redakcja danych kontaktowych, scoring deduplikacji, trigramy,
+- **Backend: 137 testów** (`./mvnw verify`):
+  - 21 klas testów jednostkowych (JUnit 5, Mockito, AssertJ): harmonogram importów, parsowanie stron wyników
+    wszystkich 11 portali (syntetyczne fikstury, bez sieci), redakcja danych kontaktowych, scoring deduplikacji, trigramy,
     parsery wartości, historia cen i `priceDropped`, cykl życia ofert, blokada równoległego importu,
     limity zapisanych wyszukiwań, ochrona ostatniego admina, optimistic locking, walidator kryteriów,
     sortowanie, builder SQL, dopasowanie alertów, robots.txt, parser snapshotów, JWT;
@@ -488,24 +489,61 @@ Po zakończonym imporcie odświeżane są mediany dzielnic (`district_price_stat
 - **Frontend: 16 testów Vitest**: serializacja filtrów do URL (round-trip), formatowanie, porównywarka,
   mapowanie błędów ProblemDetail na formularz, formularz rejestracji (walidacja Zod i błąd 409 z API).
 
+## Źródła danych
+
+Każdy portal to osobny adapter (`ingestion/adapter/http`) zarejestrowany w `AdapterRegistry` i osobny rekord
+w tabeli `source` (migracje `V8`, `V11`) z własnym harmonogramem. Adaptery stronicowanych list dziedziczą po
+`PagedPortalAdapter` (miasta × sprzedaż/wynajem × `LIVE_MAX_PAGES` stron); portale publikujące dane schema.org
+w JSON-LD korzystają ze wspólnego `SchemaOrgListings`.
+
+| Portal | Źródło (`code`) | Adapter | Skąd dane | Zakres |
+|---|---|---|---|---|
+| Otodom | `otodom-live` | `OtodomHttpAdapter` | JSON `__NEXT_DATA__` stron wyników | 6 miast, sprzedaż + wynajem |
+| OLX | `olx-live` | `OlxApiAdapter` | publiczne API `/api/v1/offers/` | 6 miast, sprzedaż + wynajem |
+| Morizon | `morizon-live` | `MorizonAdapter` | JSON-LD (schema.org `Offer`) | 6 miast, sprzedaż + wynajem |
+| Gratka | `gratka-live` | `GratkaAdapter` | JSON-LD (schema.org `Offer`) | 6 miast, sprzedaż + wynajem |
+| Nieruchomości-online | `nieruchomosci-online-live` | `NieruchomosciOnlineAdapter` | JSON-LD + dzielnica z kafelka HTML; serwisy miejskie (`warszawa.nieruchomosci-online.pl` …) | 6 miast, sprzedaż + wynajem |
+| Domiporta | `domiporta-live` | `DomiportaAdapter` | JSON-LD (schema.org `RealEstateListing`) | 6 miast, sprzedaż + wynajem |
+| GetHome | `gethome-live` | `GetHomeAdapter` | stan aplikacji `__INITIAL_STATE__` (JSON) | 6 miast, sprzedaż + wynajem |
+| Szybko.pl | `szybko-live` | `SzybkoAdapter` | mikrodane schema.org kart wyników | 6 miast, sprzedaż + wynajem |
+| Adresowo | `adresowo-live` | `AdresowoAdapter` | karty wyników HTML | 6 miast, sprzedaż + wynajem |
+| Sprzedajemy.pl | `sprzedajemy-live` | `SprzedajemyAdapter` | karty wyników HTML | 6 miast, sprzedaż + wynajem |
+| Trojmiasto.pl | `trojmiasto-live` | `TrojmiastoAdapter` | karty wyników HTML | Gdańsk, sprzedaż (rynek wtórny) |
+
+Portale z listy, których **nie** podłączono, i powód:
+
+| Portal | Powód |
+|---|---|
+| Allegro (lokalnie) | ochrona anty-botowa (HTTP 403) — zgodnie z założeniami jej nie obchodzimy |
+| Allegratka, NoweMieszkania.pl, PropertyStock, Trovit, Mitula | serwisy nie odpowiadały / domeny nieaktywne w czasie implementacji; Trovit i Mitula to zresztą agregatory cudzych ogłoszeń (duplikaty tych samych ofert) |
+| Gumtree | serwis nieistniejący (zamknięty w Polsce) |
+| RynekPierwotny, TabelaOfert, NoweInwestycje, Deweloperuch, Obido | listy **inwestycji** z zakresem cen („od … zł”), a nie konkretnych mieszkań z ceną i metrażem — nie pasują do modelu oferty |
+| Komercyjne.pl, JLL, CBRE, Cushman & Wakefield, Reas | nieruchomości komercyjne / raporty rynkowe — poza zakresem (mieszkania) |
+| Domy.pl, Oferty.net | strony wyników nie zawierają cen w HTML (ładowane skryptami) |
+| Lento, Bezposrednio.pl | brak ustrukturyzowanych danych w kartach (cena/metraż tylko w wolnym tekście), wysoki odsetek błędów parsowania |
+| regionalne serwisy Nieruchomości-online | obsłużone adapterem Nieruchomości-online (subdomeny miast) |
+
+Ta sama oferta wystawiona na kilku portalach (np. Morizon i Gratka należą do jednej grupy i publikują te same
+ogłoszenia) jest scalana przez deduplikację w jedną nieruchomość z kilkoma ofertami.
+
 ## Aspekt prawny źródeł danych
 
 **Stan techniczny.** Pobieranie prawdziwych ogłoszeń jest zrobione możliwie „grzecznie”:
 
-- adaptery `OtodomHttpAdapter` (osadzony JSON ze stron wyników) i `OlxApiAdapter` (endpoint
-  `/api/v1/offers/`, wprost dozwolony w robots.txt OLX) pobierają **wyłącznie strony wyników wyszukiwania**;
+- adaptery pobierają **wyłącznie strony wyników wyszukiwania** (osadzone dane strukturalne JSON/JSON-LD albo karty
+  wyników HTML; OLX — endpoint `/api/v1/offers/`, wprost dozwolony w robots.txt), nigdy stron kontaktowych;
 - każde żądanie jest sprawdzane z `robots.txt` portalu (parser zgodny z RFC 9309: wzorce `*` i `$`,
   ścieżka razem z query stringiem); brak zgody = brak żądania;
 - min. 3 s odstępu między żądaniami, identyfikujący `User-Agent` (`LIVE_USER_AGENT` — warto dopisać kontakt),
-  domyślnie tylko 2 strony na miasto i rodzaj transakcji (~50 żądań na import), import raz dziennie w nocy;
+  domyślnie tylko 2 strony na miasto i rodzaj transakcji (do ~25 żądań na portal), import raz dziennie w nocy;
 - **bez logowania i bez obchodzenia zabezpieczeń**: odpowiedź HTTP 403/429 kończy pobieranie (bez ponowień);
 - **minimalizacja danych osobowych (RODO)**: nie pobieramy stron kontaktowych ani numerów telefonów,
-  nie zapisujemy imion osób prywatnych (tylko „osoba prywatna” albo nazwa firmy), a z opisów usuwamy numery
+  nie zapisujemy imion osób prywatnych ani agentów (tylko „osoba prywatna” albo nazwa biura), a z opisów usuwamy numery
   telefonów i adresy e-mail (`ContactRedactor`); zdjęcia nie są kopiowane — wyświetlamy je z CDN portalu;
 - każda oferta linkuje do oryginalnego ogłoszenia („Przejdź”), gdzie odbywa się kontakt.
 
 **Ryzyko prawne (do świadomej decyzji właściciela projektu).** Zgodność z robots.txt **nie oznacza zgody**
-właściciela serwisu. Regulaminy Otodom i OLX zabraniają automatycznego pobierania treści, a zbiory ogłoszeń mogą
+właściciela serwisu. Regulaminy portali (m.in. Otodom, OLX) zabraniają automatycznego pobierania treści, a zbiory ogłoszeń mogą
 być chronione jako baza danych (prawo *sui generis*, ustawa o ochronie baz danych / dyrektywa 96/9/WE).
 Projekt ma charakter edukacyjny, niekomercyjny i pobiera niewielkie ilości danych, ale **nie jest to podstawa
 prawna**. Bezpieczne warianty: uzyskać zgodę portalu lub dostęp do oficjalnego API/feedu, ograniczyć się do
@@ -570,8 +608,11 @@ Kafelki mapy pochodzą z OpenStreetMap (zgodnie z polityką użytkowania kafelk�
 - **Dzielnice z portali**: słownik uzupełniono o nazwy używane przez Otodom/OLX (migracja `V9`); gdy portal nie podaje
   dzielnicy, a ogłoszenie ma dokładne współrzędne, przypisywana jest najbliższa dzielnica (do 3 km od centroidu).
   Na prawdziwych danych dzielnica jest znana dla 94–100% ogłoszeń.
-- **Otodom i OLX zamiast Morizon/Gratka**: oba dają ustrukturyzowane dane (JSON) bez parsowania kruchego HTML-u,
-  a robots.txt Morizon/Gratka blokuje większość parametrów filtrów stron wyników.
+- **Dane strukturalne przed HTML-em**: gdzie portal publikuje dane schema.org (JSON-LD, mikrodane) lub stan
+  aplikacji w JSON-ie, adapter czyta je zamiast układu strony — są stabilniejsze przy zmianach wyglądu. Karty HTML
+  (Adresowo, Sprzedajemy, Trojmiasto.pl) parsuje Jsoup; wartości rozpoznawane są po jednostkach („zł”, „m²”, „pok.”).
+  Morizon i Gratka zezwalają w robots.txt tylko na strony 2–10 bez innych parametrów filtrów — adresy stron są
+  budowane właśnie tak. Oferty bez ceny („zapytaj”) i spoza wyszukiwanego miasta są pomijane.
 - **Źródło `manual`** dla ofert dodawanych przez admina — nie jest importowane, więc ręczne oferty nie są
   dezaktywowane przez regułę „3 importów”.
 - **Komunikaty walidacji po polsku** niezależnie od nagłówka `Accept-Language` (stały locale `pl_PL`).
@@ -612,7 +653,7 @@ Kafelki mapy pochodzą z OpenStreetMap (zgodnie z polityką użytkowania kafelk�
 | Paginacja | wyszukiwarka, ulubione, powiadomienia, importy, nieruchomości/oferty/użytkownicy (admin) — `PageResponse` |
 | Wyszukiwanie / filtrowanie | `search/` — `SearchSqlBuilder`, `SearchService`, fasety; filtry list admina |
 | Dokumentacja API (Swagger/OpenAPI) | springdoc, `common/config/OpenApiConfig`, adnotacje `@Operation`/`@Schema`, `/swagger-ui.html` |
-| Min. 5 testów jednostkowych logiki | 16 klas testów jednostkowych (np. `DedupScorerTest`, `PriceAnalyzerTest`, `SavedSearchServiceTest`) |
+| Min. 5 testów jednostkowych logiki | 21 klas testów jednostkowych (np. `DedupScorerTest`, `PriceAnalyzerTest`, `SavedSearchServiceTest`) |
 | Min. 3 testy integracyjne REST API | 7 klas `*IT` z MockMvc + Testcontainers |
 | Migracje schematu | Flyway `V1`–`V9` w `db/migration` |
 | Zarządzanie konfiguracją | `application.yml` + profile dev/test/prod, `@ConfigurationProperties` (rekordy), `.env` |
@@ -633,7 +674,7 @@ Kafelki mapy pochodzą z OpenStreetMap (zgodnie z polityką użytkowania kafelk�
 | Edycja danych | kryteria i alerty wyszukiwań, notatki, źródła, nieruchomości (z obsługą 409), role i blokada użytkowników |
 | Usuwanie danych | wyszukiwania, ulubione, notatki, źródła, nieruchomości, oferty, użytkownicy |
 | Obsługa błędów API | `ApiError` z ProblemDetail, toasty (sonner), `applyApiErrors` (błędy pól → formularz), stany loading/empty/error |
-| Integracja z zewnętrznymi serwisami | adaptery live Otodom/OLX (`ingestion/adapter/http`) z robots.txt, limitem żądań i redakcją danych osobowych |
+| Integracja z zewnętrznymi serwisami | adaptery live 11 portali (`ingestion/adapter/http`) z robots.txt, limitem żądań i redakcją danych osobowych |
 | Mechanizm asynchroniczny | RabbitMQ (`ingestion/messaging`: kolejki, retry, DLQ) + eventy Springa (`@TransactionalEventListener`, `@Async`) |
 | Testy najważniejszej logiki | deduplikacja, ceny, cykl życia, limity, ochrona admina, optimistic locking, walidacja, alerty — [Testy](#testy) |
 | Uruchamianie przez Docker Compose | `docker-compose.yml` — `docker compose up --build` |

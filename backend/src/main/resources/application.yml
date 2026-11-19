@@ -138,6 +138,69 @@ app:
       max-pages: ${LIVE_MAX_PAGES:2}
       cities: ${LIVE_CITIES:}
       stale-days: 14
+    morizon-live:
+      live-enabled: ${LIVE_SOURCES_ENABLED:false}
+      user-agent: ${LIVE_USER_AGENT:DomRadarBot/1.0 (projekt studencki; agregator ogloszen)}
+      min-delay-ms: ${LIVE_MIN_DELAY_MS:3000}
+      max-pages: ${LIVE_MAX_PAGES:2}
+      cities: ${LIVE_CITIES:}
+      stale-days: 14
+    gratka-live:
+      live-enabled: ${LIVE_SOURCES_ENABLED:false}
+      user-agent: ${LIVE_USER_AGENT:DomRadarBot/1.0 (projekt studencki; agregator ogloszen)}
+      min-delay-ms: ${LIVE_MIN_DELAY_MS:3000}
+      max-pages: ${LIVE_MAX_PAGES:2}
+      cities: ${LIVE_CITIES:}
+      stale-days: 14
+    nieruchomosci-online-live:
+      live-enabled: ${LIVE_SOURCES_ENABLED:false}
+      user-agent: ${LIVE_USER_AGENT:DomRadarBot/1.0 (projekt studencki; agregator ogloszen)}
+      min-delay-ms: ${LIVE_MIN_DELAY_MS:3000}
+      max-pages: ${LIVE_MAX_PAGES:2}
+      cities: ${LIVE_CITIES:}
+      stale-days: 14
+    domiporta-live:
+      live-enabled: ${LIVE_SOURCES_ENABLED:false}
+      user-agent: ${LIVE_USER_AGENT:DomRadarBot/1.0 (projekt studencki; agregator ogloszen)}
+      min-delay-ms: ${LIVE_MIN_DELAY_MS:3000}
+      max-pages: ${LIVE_MAX_PAGES:2}
+      cities: ${LIVE_CITIES:}
+      stale-days: 14
+    gethome-live:
+      live-enabled: ${LIVE_SOURCES_ENABLED:false}
+      user-agent: ${LIVE_USER_AGENT:DomRadarBot/1.0 (projekt studencki; agregator ogloszen)}
+      min-delay-ms: ${LIVE_MIN_DELAY_MS:3000}
+      max-pages: ${LIVE_MAX_PAGES:2}
+      cities: ${LIVE_CITIES:}
+      stale-days: 14
+    szybko-live:
+      live-enabled: ${LIVE_SOURCES_ENABLED:false}
+      user-agent: ${LIVE_USER_AGENT:DomRadarBot/1.0 (projekt studencki; agregator ogloszen)}
+      min-delay-ms: ${LIVE_MIN_DELAY_MS:3000}
+      max-pages: ${LIVE_MAX_PAGES:2}
+      cities: ${LIVE_CITIES:}
+      stale-days: 14
+    adresowo-live:
+      live-enabled: ${LIVE_SOURCES_ENABLED:false}
+      user-agent: ${LIVE_USER_AGENT:DomRadarBot/1.0 (projekt studencki; agregator ogloszen)}
+      min-delay-ms: ${LIVE_MIN_DELAY_MS:3000}
+      max-pages: ${LIVE_MAX_PAGES:2}
+      cities: ${LIVE_CITIES:}
+      stale-days: 14
+    sprzedajemy-live:
+      live-enabled: ${LIVE_SOURCES_ENABLED:false}
+      user-agent: ${LIVE_USER_AGENT:DomRadarBot/1.0 (projekt studencki; agregator ogloszen)}
+      min-delay-ms: ${LIVE_MIN_DELAY_MS:3000}
+      max-pages: ${LIVE_MAX_PAGES:2}
+      cities: ${LIVE_CITIES:}
+      stale-days: 14
+    trojmiasto-live:
+      live-enabled: ${LIVE_SOURCES_ENABLED:false}
+      user-agent: ${LIVE_USER_AGENT:DomRadarBot/1.0 (projekt studencki; agregator ogloszen)}
+      min-delay-ms: ${LIVE_MIN_DELAY_MS:3000}
+      max-pages: ${LIVE_MAX_PAGES:2}
+      cities: ${LIVE_CITIES:}
+      stale-days: 14
 
 logging:
   level:
