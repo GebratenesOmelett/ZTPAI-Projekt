@@ -47,6 +47,10 @@ spring:
   mvc:
     problemdetails:
       enabled: true
+  web:
+    # Komunikaty walidacji (Hibernate Validator) po polsku niezależnie od Accept-Language
+    locale: pl_PL
+    locale-resolver: fixed
   task:
     execution:
       pool:
