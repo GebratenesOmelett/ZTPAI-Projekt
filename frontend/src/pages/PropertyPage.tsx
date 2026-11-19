@@ -61,7 +61,7 @@ export default function PropertyPage() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <PhotoGallery photos={p.photos} title={p.title} />
           <Card>
             <CardHeader><CardTitle>Opis</CardTitle></CardHeader>
@@ -84,7 +84,7 @@ export default function PropertyPage() {
           </Card>
         </div>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card>
             <CardContent className="space-y-4">
               <div className="flex flex-wrap gap-2">
