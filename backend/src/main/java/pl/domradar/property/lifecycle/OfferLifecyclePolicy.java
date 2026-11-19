@@ -22,6 +22,20 @@ public final class OfferLifecyclePolicy {
     }
 
     /**
+     * Wariant dla importów częściowych (adaptery live przeglądają tylko najnowsze strony wyników):
+     * oferta wygasa, gdy nie była widziana od {@code staleBefore}.
+     *
+     * @return true, jeśli w wyniku tej operacji oferta została dezaktywowana
+     */
+    public static boolean expireIfStale(Offer offer, Instant staleBefore) {
+        if (offer.isActive() && offer.getLastSeenAt() != null && offer.getLastSeenAt().isBefore(staleBefore)) {
+            offer.setActive(false);
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Oferta nie pojawiła się w zakończonym sukcesem imporcie swojego źródła.
      *
      * @return true, jeśli w wyniku tej operacji oferta została dezaktywowana

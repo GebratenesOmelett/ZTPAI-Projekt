@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 @ConfigurationProperties("app.ingestion")
 public record IngestionProperties(
         boolean bootstrapImport,
+        boolean demoDataEnabled,
         int batchSize,
         int missedImportsToDeactivate,
         boolean schedulerEnabled,

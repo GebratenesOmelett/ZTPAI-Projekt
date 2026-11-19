@@ -1,6 +1,9 @@
 package pl.domradar.ingestion.adapter.demo;
 
 import org.springframework.stereotype.Component;
+import pl.domradar.common.exception.DomainException;
+import pl.domradar.common.exception.ErrorCode;
+import pl.domradar.ingestion.IngestionProperties;
 import pl.domradar.ingestion.adapter.ImportContext;
 import pl.domradar.ingestion.adapter.RawListing;
 import pl.domradar.ingestion.adapter.SourceAdapter;
@@ -8,6 +11,7 @@ import pl.domradar.ingestion.adapter.demo.DemoUniverse.BaseProperty;
 import pl.domradar.property.MarketType;
 import pl.domradar.property.PropertyType;
 import pl.domradar.property.TransactionType;
+import pl.domradar.source.Source;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -43,9 +47,18 @@ public class DemoAdapter implements SourceAdapter {
     private static final String[] ADJECTIVES = {"Przestronne", "Słoneczne", "Jasne", "Ciche"};
 
     private final DemoUniverse universe;
+    private final IngestionProperties properties;
 
-    public DemoAdapter(DemoUniverse universe) {
+    public DemoAdapter(DemoUniverse universe, IngestionProperties properties) {
         this.universe = universe;
+        this.properties = properties;
+    }
+
+    @Override
+    public void checkAvailable(Source source) {
+        if (!properties.demoDataEnabled()) {
+            throw new DomainException(ErrorCode.SOURCE_DISABLED, "Dane demonstracyjne są wyłączone (DEMO_DATA_ENABLED=false)");
+        }
     }
 
     @Override

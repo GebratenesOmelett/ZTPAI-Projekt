@@ -140,13 +140,24 @@ class ImportIT {
 
     @Test
     @Order(6)
-    void importOfDisabledSourceReturns422() throws Exception {
+    void importOfDisabledSourceOrDisabledLiveFetchingReturns422() throws Exception {
         String admin = ApiTestClient.adminToken(mvc, om);
         Long live = sources.findByCode("otodom-live").orElseThrow().getId();
+        Long gratka = sources.findByCode("gratka").orElseThrow().getId();
 
+        // portale live są w testach wyłączone flagą LIVE_SOURCES_ENABLED
         mvc.perform(post("/api/v1/admin/sources/{id}/imports", live).header("Authorization", bearer(admin)))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.errorCode").value("SOURCE_DISABLED"));
+                .andExpect(jsonPath("$.errorCode").value("LIVE_FETCH_DISABLED"));
+
+        jdbc.update("update source set enabled = false where id = ?", gratka);
+        try {
+            mvc.perform(post("/api/v1/admin/sources/{id}/imports", gratka).header("Authorization", bearer(admin)))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.errorCode").value("SOURCE_DISABLED"));
+        } finally {
+            jdbc.update("update source set enabled = true where id = ?", gratka);
+        }
     }
 
     @Test

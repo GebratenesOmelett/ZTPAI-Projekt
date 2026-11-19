@@ -41,4 +41,24 @@ class RobotsTxtPolicyTest {
         assertThat(RobotsTxtPolicy.parse("User-agent: *\nDisallow:", UA).isAllowed("/x")).isTrue();
         assertThat(RobotsTxtPolicy.disallowAll().isAllowed("/")).isFalse();
     }
+
+    @Test
+    void wildcardsAndEndAnchorFollowRfc9309() {
+        RobotsTxtPolicy policy = RobotsTxtPolicy.parse("""
+                User-agent: *
+                Disallow: */ajax/
+                Disallow: /api/
+                Allow: /api/v1/offers/
+                Disallow: /*sort=*
+                Disallow: /*.pdf$
+                """, UA);
+
+        assertThat(policy.isAllowed("/pl/ajax/contact")).isFalse();
+        assertThat(policy.isAllowed("/api/v1/offers/?offset=0&category_id=14")).isTrue();
+        assertThat(policy.isAllowed("/api/v1/users/1")).isFalse();
+        assertThat(policy.isAllowed("/mieszkania/warszawa?sort=price")).isFalse();
+        assertThat(policy.isAllowed("/mieszkania/warszawa?page=2")).isTrue();
+        assertThat(policy.isAllowed("/files/plan.pdf")).isFalse();
+        assertThat(policy.isAllowed("/files/plan.pdf?x=1")).isTrue();
+    }
 }

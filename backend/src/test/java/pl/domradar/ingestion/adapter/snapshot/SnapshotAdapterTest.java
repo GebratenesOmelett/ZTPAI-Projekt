@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SnapshotAdapterTest {
 
     private final SnapshotAdapter adapter = new SnapshotAdapter(
-            new IngestionProperties(false, 50, 3, false, "../data/snapshots", null, null), new ObjectMapper());
+            new IngestionProperties(false, true, 50, 3, false, "../data/snapshots", null, null), new ObjectMapper());
 
     @Test
     void parsesJsonAndHtmlSnapshotsFromDataDirectory() {

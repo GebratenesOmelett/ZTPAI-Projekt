@@ -3,14 +3,37 @@ package pl.domradar.ingestion.adapter.http;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 /**
- * Minimalny parser robots.txt: reguły Disallow/Allow dla naszego User-Agenta lub "*".
- * Wybierana jest najdłuższa pasująca reguła (zgodnie z RFC 9309).
+ * Parser robots.txt zgodny z RFC 9309: grupy {@code User-agent}, reguły {@code Allow}/{@code Disallow}
+ * ze wzorcami {@code *} (dowolny ciąg) i {@code $} (koniec ścieżki). Reguły dopasowujemy do ścieżki
+ * razem z query stringiem; wygrywa najdłuższa pasująca reguła, a przy remisie — {@code Allow}.
+ * Jeśli istnieje grupa dla naszego User-Agenta, używamy tylko jej; w przeciwnym razie grupy {@code *}.
  */
 public final class RobotsTxtPolicy {
 
-    private record Rule(String prefix, boolean allow) {
+    private record Rule(String pattern, boolean allow, Pattern regex) {
+
+        static Rule of(String pattern, boolean allow) {
+            StringBuilder re = new StringBuilder("^");
+            boolean anchored = pattern.endsWith("$");
+            String body = anchored ? pattern.substring(0, pattern.length() - 1) : pattern;
+            for (String part : body.split("\\*", -1)) {
+                if (re.length() > 1) {
+                    re.append(".*");
+                }
+                re.append(Pattern.quote(part));
+            }
+            if (anchored) {
+                re.append('$');
+            }
+            return new Rule(pattern, allow, Pattern.compile(re.toString()));
+        }
+
+        boolean matches(String path) {
+            return regex.matcher(path).find();
+        }
     }
 
     private final List<Rule> rules;
@@ -24,7 +47,7 @@ public final class RobotsTxtPolicy {
     }
 
     public static RobotsTxtPolicy disallowAll() {
-        return new RobotsTxtPolicy(List.of(new Rule("/", false)));
+        return new RobotsTxtPolicy(List.of(Rule.of("/", false)));
     }
 
     public static RobotsTxtPolicy parse(String robotsTxt, String userAgent) {
@@ -53,14 +76,14 @@ public final class RobotsTxtPolicy {
             if (!key.equals("allow") && !key.equals("disallow")) {
                 continue;
             }
-            if (key.equals("disallow") && value.isEmpty()) {
+            if (value.isEmpty()) {
                 continue;
             }
-            Rule rule = new Rule(value, key.equals("allow"));
+            Rule rule = Rule.of(value, key.equals("allow"));
             for (String agent : currentAgents) {
                 if (agent.equals("*")) {
                     wildcard.add(rule);
-                } else if (agentToken.contains(agent) || agent.contains(agentToken)) {
+                } else if (agentToken.equals(agent) || agentToken.startsWith(agent)) {
                     specific.add(rule);
                 }
             }
@@ -68,11 +91,16 @@ public final class RobotsTxtPolicy {
         return new RobotsTxtPolicy(specific.isEmpty() ? wildcard : specific);
     }
 
-    public boolean isAllowed(String path) {
+    /** @param pathAndQuery ścieżka URL razem z query stringiem, np. {@code /pl/wyniki?page=2} */
+    public boolean isAllowed(String pathAndQuery) {
+        String path = pathAndQuery == null || pathAndQuery.isEmpty() ? "/" : pathAndQuery;
         Rule best = null;
         for (Rule rule : rules) {
-            if (path.startsWith(rule.prefix()) && (best == null || rule.prefix().length() > best.prefix().length()
-                    || (rule.prefix().length() == best.prefix().length() && rule.allow()))) {
+            if (!rule.matches(path)) {
+                continue;
+            }
+            if (best == null || rule.pattern().length() > best.pattern().length()
+                    || (rule.pattern().length() == best.pattern().length() && rule.allow())) {
                 best = rule;
             }
         }

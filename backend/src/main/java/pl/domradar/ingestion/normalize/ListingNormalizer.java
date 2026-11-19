@@ -21,6 +21,7 @@ import java.util.Optional;
 public class ListingNormalizer {
 
     private static final double MAX_DISTANCE_FROM_CITY_DEG = 0.35;
+    private static final double NEAREST_DISTRICT_MAX_KM = 3.0;
 
     private final DictionaryLookup dictionary;
     private final Geocoder geocoder;
@@ -71,6 +72,10 @@ public class ListingNormalizer {
                 && Math.abs(raw.lon() - city.lon()) < MAX_DISTANCE_FROM_CITY_DEG * 1.6) {
             lat = raw.lat();
             lon = raw.lon();
+            if (district == null) {
+                // portal nie podał dzielnicy, ale znamy dokładne współrzędne — najbliższa dzielnica ze słownika
+                district = dictionary.nearestDistrict(city.id(), lat, lon, NEAREST_DISTRICT_MAX_KM).orElse(null);
+            }
         } else {
             Geocoder.GeoPoint point = geocoder.geocode(city, district, raw.street());
             lat = point.lat();
@@ -90,8 +95,8 @@ public class ListingNormalizer {
         return NormalizedListing.builder()
                 .externalId(truncate(externalId, 100))
                 .url(truncate(blankToNull(raw.url()), 1000))
-                .title(truncate(title.trim(), 300))
-                .description(truncate(blankToNull(raw.description()), 10_000))
+                .title(truncate(ContactRedactor.redact(title.trim()), 300))
+                .description(truncate(ContactRedactor.redact(blankToNull(raw.description())), 10_000))
                 .price(price)
                 .propertyType(type)
                 .transactionType(transaction)

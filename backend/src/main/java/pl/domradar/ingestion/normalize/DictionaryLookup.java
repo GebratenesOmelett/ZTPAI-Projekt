@@ -82,6 +82,16 @@ public class DictionaryLookup {
                 .map(Map.Entry::getValue);
     }
 
+    /** Najbliższa dzielnica miasta (po centroidzie) w promieniu {@code maxKm} — gdy portal nie podał nazwy dzielnicy. */
+    public Optional<DistrictRef> nearestDistrict(Long cityId, double lat, double lon, double maxKm) {
+        ensureLoaded();
+        return districtsByCity.getOrDefault(cityId, Map.of()).values().stream().distinct()
+                .map(d -> Map.entry(d, pl.domradar.ingestion.dedup.DedupScorer.haversineMeters(lat, lon, d.lat(), d.lon())))
+                .filter(e -> e.getValue() <= maxKm * 1000)
+                .min(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey);
+    }
+
     public Set<String> features(Collection<String> labels) {
         Set<String> codes = new TreeSet<>();
         if (labels == null) {

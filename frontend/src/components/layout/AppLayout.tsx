@@ -12,7 +12,7 @@ export function AppLayout() {
           <Outlet />
         </main>
         <footer className="border-t bg-background py-4 text-center text-xs text-muted-foreground">
-          DomRadar — agregator ogłoszeń nieruchomości. Dane demonstracyjne; linki prowadzą do przykładowych adresów portali.
+          DomRadar — agregator ogłoszeń nieruchomości. Oferty pochodzą z portali ogłoszeniowych; szczegóły i kontakt — w oryginalnym ogłoszeniu (przycisk „Przejdź”).
         </footer>
       </div>
       <Toaster richColors position="top-right" />

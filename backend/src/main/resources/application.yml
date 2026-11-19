@@ -106,6 +106,8 @@ app:
     from: ${MAIL_FROM:alerty@domradar.local}
   ingestion:
     bootstrap-import: ${APP_BOOTSTRAP_IMPORT:true}
+    # Dane syntetyczne (DemoAdapter) i snapshoty; wyłącz, gdy korzystasz tylko z prawdziwych ogłoszeń
+    demo-data-enabled: ${DEMO_DATA_ENABLED:true}
     batch-size: 50
     missed-imports-to-deactivate: 3
     scheduler-enabled: true
@@ -120,12 +122,22 @@ app:
   limits:
     max-saved-searches: 10
     max-instant-alerts: 3
+  # Prawdziwe ogłoszenia z portali (patrz README, "Aspekt prawny"). Wyłączone, dopóki LIVE_SOURCES_ENABLED != true.
   sources:
     otodom-live:
-      live-enabled: false
-      user-agent: "DomRadarBot/1.0 (+https://github.com/domradar; kontakt przez stronę projektu)"
-      min-delay-ms: 3000
-      start-url: https://www.otodom.pl/pl/wyniki/sprzedaz/mieszkanie/cala-polska
+      live-enabled: ${LIVE_SOURCES_ENABLED:false}
+      user-agent: ${LIVE_USER_AGENT:DomRadarBot/1.0 (projekt studencki; agregator ogloszen)}
+      min-delay-ms: ${LIVE_MIN_DELAY_MS:3000}
+      max-pages: ${LIVE_MAX_PAGES:2}
+      cities: ${LIVE_CITIES:}
+      stale-days: 14
+    olx-live:
+      live-enabled: ${LIVE_SOURCES_ENABLED:false}
+      user-agent: ${LIVE_USER_AGENT:DomRadarBot/1.0 (projekt studencki; agregator ogloszen)}
+      min-delay-ms: ${LIVE_MIN_DELAY_MS:3000}
+      max-pages: ${LIVE_MAX_PAGES:2}
+      cities: ${LIVE_CITIES:}
+      stale-days: 14
 
 logging:
   level:

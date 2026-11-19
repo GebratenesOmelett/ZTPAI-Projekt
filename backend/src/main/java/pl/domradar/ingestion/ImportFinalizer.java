@@ -5,18 +5,22 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import pl.domradar.ingestion.adapter.AdapterRegistry;
+import pl.domradar.ingestion.adapter.SourceAdapter;
 import pl.domradar.ingestion.event.ImportCompletedEvent;
 import pl.domradar.property.*;
 import pl.domradar.property.lifecycle.OfferLifecyclePolicy;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 
 /**
  * Zamyka import po przetworzeniu wszystkich batchy:
  * oferty niewidziane w tym imporcie dostają +1 do licznika pominięć i po 3 udanych importach
- * stają się nieaktywne; nieruchomości bez aktywnych ofert są archiwizowane (reguła nr 3).
+ * stają się nieaktywne (źródła z pełnym obrazem danych). Dla importów częściowych (adaptery live, które przeglądają
+ * tylko najnowsze strony wyników) oferta wygasa, gdy nie była widziana przez N dni; nieruchomości bez aktywnych ofert są archiwizowane (reguła nr 3).
  * Import z batchami w DLQ nie jest uznawany za udany i nie wpływa na cykl życia ofert.
  */
 @Slf4j
@@ -30,6 +34,7 @@ public class ImportFinalizer {
     private final IngestionProperties properties;
     private final ImportJobService jobService;
     private final ApplicationEventPublisher events;
+    private final AdapterRegistry adapterRegistry;
     private final Clock clock;
 
     @Transactional
@@ -58,13 +63,20 @@ public class ImportFinalizer {
 
     private int applyLifecycle(ImportJob job) {
         int threshold = properties.missedImportsToDeactivate();
+        SourceAdapter adapter = adapterRegistry.exists(job.getSource().getAdapter())
+                ? adapterRegistry.get(job.getSource().getAdapter()) : null;
+        boolean fullSnapshot = adapter == null || adapter.fullSnapshot();
+        Instant staleBefore = clock.instant().minus(Duration.ofDays(adapter == null ? 14 : adapter.staleDays(job.getSource().getCode())));
         Map<Long, Property> affected = new LinkedHashMap<>();
         int deactivated = 0;
         for (Offer offer : offerRepository.findBySourceIdAndActiveTrue(job.getSource().getId())) {
             if (Objects.equals(offer.getLastSeenJobId(), job.getId())) {
                 continue;
             }
-            if (OfferLifecyclePolicy.registerMiss(offer, threshold)) {
+            boolean deactivate = fullSnapshot
+                    ? OfferLifecyclePolicy.registerMiss(offer, threshold)
+                    : OfferLifecyclePolicy.expireIfStale(offer, staleBefore);
+            if (deactivate) {
                 deactivated++;
                 affected.put(offer.getProperty().getId(), offer.getProperty());
             }

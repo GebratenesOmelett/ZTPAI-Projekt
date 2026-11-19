@@ -42,6 +42,23 @@ class OfferLifecyclePolicyTest {
     }
 
     @Test
+    void partialImportsExpireOffersNotSeenForConfiguredDays() {
+        Instant now = Instant.parse("2026-11-19T10:00:00Z");
+        Offer stale = new Offer();
+        stale.setActive(true);
+        stale.setLastSeenAt(now.minus(java.time.Duration.ofDays(15)));
+        Offer recent = new Offer();
+        recent.setActive(true);
+        recent.setLastSeenAt(now.minus(java.time.Duration.ofDays(3)));
+        Instant staleBefore = now.minus(java.time.Duration.ofDays(14));
+
+        assertThat(OfferLifecyclePolicy.expireIfStale(stale, staleBefore)).isTrue();
+        assertThat(stale.isActive()).isFalse();
+        assertThat(OfferLifecyclePolicy.expireIfStale(recent, staleBefore)).isFalse();
+        assertThat(recent.isActive()).isTrue();
+    }
+
+    @Test
     void missCounterIsResetBetweenGaps() {
         Offer offer = new Offer();
         offer.setActive(true);

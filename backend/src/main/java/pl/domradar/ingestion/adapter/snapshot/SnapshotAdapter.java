@@ -55,6 +55,9 @@ public class SnapshotAdapter implements SourceAdapter {
 
     @Override
     public void checkAvailable(Source source) {
+        if (!properties.demoDataEnabled()) {
+            throw new DomainException(ErrorCode.SOURCE_DISABLED, "Dane demonstracyjne są wyłączone (DEMO_DATA_ENABLED=false)");
+        }
         if (!Files.isDirectory(directory(source.getCode()))) {
             throw new DomainException(ErrorCode.SOURCE_DISABLED,
                     "Brak katalogu ze snapshotami dla źródła " + source.getCode(),

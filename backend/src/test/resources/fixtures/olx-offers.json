@@ -1,0 +1,52 @@
+{
+  "_comment": "Fikstura testowa: struktura odpowiedzi /api/v1/offers/ z danymi syntetycznymi",
+  "data": [
+    {
+      "id": 2001,
+      "url": "https://www.olx.pl/d/oferta/testowe-mieszkanie-CID3-ID2001.html",
+      "title": "Testowe mieszkanie 2 pokoje Mokotów",
+      "description": "<p>Mieszkanie po remoncie.</p><p>Tel. +48 601-234-567, mail jan.testowy@example.com</p>",
+      "business": false,
+      "user": {"name": "Jan Testowy", "company_name": ""},
+      "params": [
+        {"key": "price", "value": {"value": 649000, "currency": "PLN", "label": "649 000 zł"}},
+        {"key": "m", "value": {"key": "48.5", "label": "48,50 m²"}},
+        {"key": "rooms", "value": {"key": "two", "label": "2 pokoje"}},
+        {"key": "floor_select", "value": {"key": "floor_3", "label": "3"}},
+        {"key": "market", "value": {"key": "secondary", "label": "Wtórny"}},
+        {"key": "winda", "value": {"key": "yes", "label": "Tak"}},
+        {"key": "parking", "value": {"key": "garage", "label": "w garażu"}}
+      ],
+      "location": {"city": {"id": 17871, "name": "Warszawa"}, "district": {"id": 353, "name": "Mokotów"}},
+      "map": {"lat": 52.19, "lon": 21.03, "radius": 0, "show_detailed": true},
+      "photos": [{"link": "https://example.com/photo/1;s={width}x{height}"}]
+    },
+    {
+      "id": 2002,
+      "url": "https://www.olx.pl/d/oferta/bez-ceny-CID3-ID2002.html",
+      "title": "Ogłoszenie bez ceny",
+      "business": true,
+      "params": [{"key": "m", "value": {"label": "30 m²"}}],
+      "location": {"city": {"name": "Warszawa"}}
+    },
+    {
+      "id": 2003,
+      "url": "https://www.olx.pl/d/oferta/biuro-CID3-ID2003.html",
+      "title": "Kawalerka od biura",
+      "description": "Opis",
+      "business": true,
+      "user": {"name": "Agencja Testowa", "company_name": ""},
+      "params": [
+        {"key": "price", "value": {"value": 2300, "currency": "PLN", "label": "2 300 zł"}},
+        {"key": "m", "value": {"label": "27 m²"}},
+        {"key": "rooms", "value": {"label": "Kawalerka"}},
+        {"key": "floor_select", "value": {"label": "Parter"}},
+        {"key": "parking", "value": {"label": "brak"}}
+      ],
+      "location": {"city": {"name": "Kraków"}, "district": {"name": "Krowodrza"}},
+      "map": {"lat": 50.07, "lon": 19.91, "radius": 8, "show_detailed": false},
+      "photos": []
+    }
+  ],
+  "links": {"self": {"href": "x"}, "next": {"href": "y"}}
+}

@@ -6,14 +6,15 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import pl.domradar.common.exception.DomainException;
 import pl.domradar.property.PropertyRepository;
 import pl.domradar.source.Source;
 import pl.domradar.source.SourceRepository;
 
-import java.util.Set;
 
 /**
- * Przy pierwszym uruchomieniu (pusta baza) zleca import ze źródeł demo i snapshot,
+ * Przy pierwszym uruchomieniu (pusta baza) zleca import ze wszystkich włączonych i dostępnych źródeł
+ * (demo/snapshot przy DEMO_DATA_ENABLED=true, portale przy LIVE_SOURCES_ENABLED=true),
  * aby {@code docker compose up} od razu dawał aplikację z danymi.
  */
 @Slf4j
@@ -21,8 +22,6 @@ import java.util.Set;
 @Order(10)
 @RequiredArgsConstructor
 public class BootstrapImportRunner implements ApplicationRunner {
-
-    private static final Set<String> BOOTSTRAP_ADAPTERS = Set.of("demo", "snapshot");
 
     private final IngestionProperties properties;
     private final PropertyRepository propertyRepository;
@@ -37,11 +36,14 @@ public class BootstrapImportRunner implements ApplicationRunner {
         }
         log.info("Empty database - requesting bootstrap imports");
         for (Source source : sourceRepository.findAllByOrderByNameAsc()) {
-            if (!source.isEnabled() || !BOOTSTRAP_ADAPTERS.contains(source.getAdapter())) {
+            if (!source.isEnabled()) {
                 continue;
             }
             try {
                 importService.requestImport(source.getId(), ImportTrigger.BOOTSTRAP, "bootstrap");
+            } catch (DomainException e) {
+                // np. dane demo wyłączone (DEMO_DATA_ENABLED=false) lub portale live wyłączone (LIVE_SOURCES_ENABLED=false)
+                log.info("Bootstrap import of {} skipped: {}", source.getCode(), e.getMessage());
             } catch (RuntimeException e) {
                 log.warn("Bootstrap import of {} not started: {}", source.getCode(), e.getMessage());
             }

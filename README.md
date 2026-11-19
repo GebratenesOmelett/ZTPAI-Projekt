@@ -12,8 +12,9 @@ Nieruchomości-online). To samo mieszkanie wystawione na kilku portalach jest po
 
 Projekt zaliczeniowy z przedmiotu ZTPAI (aplikacja webowa: backend + REST API + frontend + baza danych).
 
-> **Dane są demonstracyjne.** Ze względu na regulaminy portali aplikacja domyślnie nie pobiera danych
-> z prawdziwych serwisów — patrz [Aspekt prawny źródeł danych](#aspekt-prawny-źródeł-danych).
+> **Źródła danych:** prawdziwe ogłoszenia z **Otodom** i **OLX** (adaptery live, włączane zmienną
+> `LIVE_SOURCES_ENABLED`) oraz — do pracy offline i testów — dane syntetyczne (`DEMO_DATA_ENABLED`).
+> Przed włączeniem pobierania z portali przeczytaj [Aspekt prawny źródeł danych](#aspekt-prawny-źródeł-danych).
 
 ---
 
@@ -62,8 +63,14 @@ cp .env.example .env        # na Windows (PowerShell): Copy-Item .env.example .e
 docker compose up --build
 ```
 
-Przy pierwszym starcie (pusta baza) backend automatycznie uruchamia import ze wszystkich źródeł
-demonstracyjnych — po ok. minucie w bazie jest ~1250 nieruchomości z ~2500 ofert.
+Przy pierwszym starcie (pusta baza) backend automatycznie uruchamia import ze wszystkich włączonych źródeł:
+
+| Tryb (`.env`) | Co się dzieje | Wynik po starcie |
+|---|---|---|
+| `LIVE_SOURCES_ENABLED=true`, `DEMO_DATA_ENABLED=false` (domyślnie w `.env.example`) | pobranie najnowszych ogłoszeń z Otodom i OLX (6 miast × sprzedaż/wynajem, `LIVE_MAX_PAGES` stron) | po ok. 3 min ~2000 prawdziwych ofert, ~1900 nieruchomości |
+| `LIVE_SOURCES_ENABLED=false`, `DEMO_DATA_ENABLED=true` | dane syntetyczne, działa bez internetu | po ok. 1 min ~1250 nieruchomości z ~2500 ofert |
+
+Kolejne importy portali uruchamia scheduler co 6 godzin (lub admin przyciskiem „Importuj”).
 
 | Adres | Co |
 |---|---|
@@ -94,9 +101,10 @@ Można też założyć własne konto przez formularz rejestracji.
 3. Otwórz nieruchomość z oznaczeniem „2 portale” — zobaczysz oferty z obu portali, wykres historii cen i
    porównanie do mediany dzielnicy.
 4. Zaloguj się jako użytkownik, zapisz wyszukiwanie z alertem **INSTANT**.
-5. Zaloguj się jako admin (np. w drugiej przeglądarce), w „Panel admina → Źródła” kliknij „Importuj” przy Otodom.
-   W zakładce „Importy” postęp aktualizuje się na żywo. Kolejny import tego samego źródła symuluje zmiany cen
-   i znikające ogłoszenia; po imporcie użytkownik dostaje toast + powiadomienie w dzwonku, a e-mail trafia do Mailpit.
+5. Zaloguj się jako admin (np. w drugiej przeglądarce), w „Panel admina → Źródła” kliknij „Importuj” przy Otodom lub OLX.
+   W zakładce „Importy” postęp aktualizuje się na żywo. Nowe ogłoszenia pasujące do wyszukiwania z alertem
+   dają użytkownikowi toast + powiadomienie w dzwonku, a e-mail trafia do Mailpit. (W trybie demo kolejne importy
+   symulują też zmiany cen i znikające ogłoszenia.)
 6. W „Panel admina → Nieruchomości” edytuj nieruchomość. Gdy ktoś inny zapisze ją w międzyczasie, pojawi się
    dialog konfliktu wersji (409) z opcją wczytania aktualnych danych.
 
@@ -185,7 +193,7 @@ erDiagram
         varchar code UK
         varchar name
         varchar base_url
-        varchar adapter "demo | snapshot | otodom-http | manual"
+        varchar adapter "otodom-http | olx-api | demo | snapshot | manual"
         boolean enabled
         varchar import_cron
         timestamptz last_import_at
@@ -303,7 +311,7 @@ erDiagram
 ```
 
 Schemat, rozszerzenia, indeksy i słowniki tworzą migracje Flyway w `backend/src/main/resources/db/migration`
-(`V1`–`V7`). Najważniejsze indeksy: GIN na `search_vector` i trigramach `search_text`/ulicy, GiST na
+(`V1`–`V9`). Najważniejsze indeksy: GIN na `search_vector` i trigramach `search_text`/ulicy, GiST na
 `location`, złożone btree pod filtry i sortowania oraz częściowy unikalny indeks
 `ux_import_job_one_active` (co najwyżej jeden aktywny import na źródło).
 
@@ -463,8 +471,9 @@ Po zakończonym imporcie odświeżane są mediany dzielnic (`district_price_stat
 
 ## Testy
 
-- **Backend: 115 testów** (`./mvnw verify`):
-  - 16 klas testów jednostkowych (JUnit 5, Mockito, AssertJ): scoring deduplikacji, trigramy,
+- **Backend: 122 testy** (`./mvnw verify`):
+  - 18 klas testów jednostkowych (JUnit 5, Mockito, AssertJ): parsowanie odpowiedzi Otodom i OLX
+    (syntetyczne fikstury), redakcja danych kontaktowych, scoring deduplikacji, trigramy,
     parsery wartości, historia cen i `priceDropped`, cykl życia ofert, blokada równoległego importu,
     limity zapisanych wyszukiwań, ochrona ostatniego admina, optimistic locking, walidator kryteriów,
     sortowanie, builder SQL, dopasowanie alertów, robots.txt, parser snapshotów, JWT;
@@ -477,20 +486,31 @@ Po zakończonym imporcie odświeżane są mediany dzielnic (`district_price_stat
 
 ## Aspekt prawny źródeł danych
 
-Regulaminy polskich portali ogłoszeniowych zabraniają automatycznego pobierania (scrapingu) treści.
-Dlatego dane w projekcie pochodzą z trzech rodzajów adapterów (`SourceAdapter`, rejestracja po kodzie):
+**Stan techniczny.** Pobieranie prawdziwych ogłoszeń jest zrobione możliwie „grzecznie”:
 
-1. **`DemoAdapter` (domyślny)** — deterministycznie generuje realistyczne ogłoszenia dla kilku „portali”
-   (polskie miasta i dzielnice, orientacyjne ceny za m², różne formaty pól dla każdego portalu). Celowo tworzy
-   duplikaty między portalami (lekko inne tytuły, ceny, metraże), zmienia ceny i usuwa ogłoszenia między
-   kolejnymi importami. Nazwy biur nieruchomości są fikcyjne; linki prowadzą do przykładowych ścieżek `/demo/...`.
-2. **`SnapshotAdapter`** — parsuje ręcznie przygotowane pliki JSON/HTML z `data/snapshots/<kod-źródła>/`
-   (Jsoup), żeby pokazać prawdziwe parsowanie i normalizację bez łączenia się z portalem.
-3. **`OtodomHttpAdapter`** — szkielet adaptera HTTP, **domyślnie wyłączony**
-   (`app.sources.otodom-live.live-enabled=false`; próba importu kończy się 422). Respektuje `robots.txt`,
-   ogranicza częstotliwość żądań, przedstawia się identyfikującym User-Agentem, nie loguje się do portali i
-   nie obchodzi zabezpieczeń anty-botowych (HTTP 403/429 kończy import). Mógłby zostać włączony tylko przy
-   zgodzie portalu lub z oficjalnym API.
+- adaptery `OtodomHttpAdapter` (osadzony JSON ze stron wyników) i `OlxApiAdapter` (endpoint
+  `/api/v1/offers/`, wprost dozwolony w robots.txt OLX) pobierają **wyłącznie strony wyników wyszukiwania**;
+- każde żądanie jest sprawdzane z `robots.txt` portalu (parser zgodny z RFC 9309: wzorce `*` i `$`,
+  ścieżka razem z query stringiem); brak zgody = brak żądania;
+- min. 3 s odstępu między żądaniami, identyfikujący `User-Agent` (`LIVE_USER_AGENT` — warto dopisać kontakt),
+  domyślnie tylko 2 strony na miasto i rodzaj transakcji (~50 żądań na import), import co 6 godzin;
+- **bez logowania i bez obchodzenia zabezpieczeń**: odpowiedź HTTP 403/429 kończy pobieranie (bez ponowień);
+- **minimalizacja danych osobowych (RODO)**: nie pobieramy stron kontaktowych ani numerów telefonów,
+  nie zapisujemy imion osób prywatnych (tylko „osoba prywatna” albo nazwa firmy), a z opisów usuwamy numery
+  telefonów i adresy e-mail (`ContactRedactor`); zdjęcia nie są kopiowane — wyświetlamy je z CDN portalu;
+- każda oferta linkuje do oryginalnego ogłoszenia („Przejdź”), gdzie odbywa się kontakt.
+
+**Ryzyko prawne (do świadomej decyzji właściciela projektu).** Zgodność z robots.txt **nie oznacza zgody**
+właściciela serwisu. Regulaminy Otodom i OLX zabraniają automatycznego pobierania treści, a zbiory ogłoszeń mogą
+być chronione jako baza danych (prawo *sui generis*, ustawa o ochronie baz danych / dyrektywa 96/9/WE).
+Projekt ma charakter edukacyjny, niekomercyjny i pobiera niewielkie ilości danych, ale **nie jest to podstawa
+prawna**. Bezpieczne warianty: uzyskać zgodę portalu lub dostęp do oficjalnego API/feedu, ograniczyć się do
+prezentacji na zaliczeniu albo przełączyć aplikację w tryb demo (`LIVE_SOURCES_ENABLED=false`,
+`DEMO_DATA_ENABLED=true`) — wtedy działają dane syntetyczne:
+
+1. **`DemoAdapter`** — deterministycznie generuje realistyczne ogłoszenia dla kilku „portali” (duplikaty między
+   portalami, zmiany cen, znikające ogłoszenia; fikcyjne nazwy biur, linki `/demo/...`);
+2. **`SnapshotAdapter`** — parsuje ręcznie przygotowane pliki JSON/HTML z `data/snapshots/<kod-źródła>/`.
 
 Kafelki mapy pochodzą z OpenStreetMap (zgodnie z polityką użytkowania kafelków OSM do celów demonstracyjnych).
 
@@ -540,6 +560,14 @@ Kafelki mapy pochodzą z OpenStreetMap (zgodnie z polityką użytkowania kafelk�
 - **Optimistic locking na dwóch poziomach**: jawne porównanie `version` z żądania (czytelny 409 z
   `currentVersion`) oraz `@Version` JPA (wyścig między odczytem a zapisem). Znaczniki czasu przez
   `@CreationTimestamp`/`@UpdateTimestamp`, bo modyfikacja encji w `@PreUpdate` powodowała podwójny UPDATE.
+- **Import częściowy z portali**: adaptery live przeglądają tylko najnowsze strony wyników, więc reguła
+  „3 importy bez wystąpienia” dezaktywowałaby oferty, które nadal wiszą na portalu. Dla takich źródeł
+  (`SourceAdapter#fullSnapshot() = false`) oferta wygasa, gdy nie była widziana przez 14 dni.
+- **Dzielnice z portali**: słownik uzupełniono o nazwy używane przez Otodom/OLX (migracja `V9`); gdy portal nie podaje
+  dzielnicy, a ogłoszenie ma dokładne współrzędne, przypisywana jest najbliższa dzielnica (do 3 km od centroidu).
+  Na prawdziwych danych dzielnica jest znana dla 94–100% ogłoszeń.
+- **Otodom i OLX zamiast Morizon/Gratka**: oba dają ustrukturyzowane dane (JSON) bez parsowania kruchego HTML-u,
+  a robots.txt Morizon/Gratka blokuje większość parametrów filtrów stron wyników.
 - **Źródło `manual`** dla ofert dodawanych przez admina — nie jest importowane, więc ręczne oferty nie są
   dezaktywowane przez regułę „3 importów”.
 - **Komunikaty walidacji po polsku** niezależnie od nagłówka `Accept-Language` (stały locale `pl_PL`).
@@ -582,7 +610,7 @@ Kafelki mapy pochodzą z OpenStreetMap (zgodnie z polityką użytkowania kafelk�
 | Dokumentacja API (Swagger/OpenAPI) | springdoc, `common/config/OpenApiConfig`, adnotacje `@Operation`/`@Schema`, `/swagger-ui.html` |
 | Min. 5 testów jednostkowych logiki | 16 klas testów jednostkowych (np. `DedupScorerTest`, `PriceAnalyzerTest`, `SavedSearchServiceTest`) |
 | Min. 3 testy integracyjne REST API | 7 klas `*IT` z MockMvc + Testcontainers |
-| Migracje schematu | Flyway `V1`–`V7` w `db/migration` |
+| Migracje schematu | Flyway `V1`–`V9` w `db/migration` |
 | Zarządzanie konfiguracją | `application.yml` + profile dev/test/prod, `@ConfigurationProperties` (rekordy), `.env` |
 | Brak sekretów w repo | sekrety tylko z env (`.env` w `.gitignore`, w repo `.env.example`); konta seedowane z env (`AccountSeeder`) |
 | Logika oddzielona od HTTP | serwisy rzucają `DomainException` z `ErrorCode`; mapowanie na statusy tylko w `GlobalExceptionHandler` |
@@ -601,6 +629,7 @@ Kafelki mapy pochodzą z OpenStreetMap (zgodnie z polityką użytkowania kafelk�
 | Edycja danych | kryteria i alerty wyszukiwań, notatki, źródła, nieruchomości (z obsługą 409), role i blokada użytkowników |
 | Usuwanie danych | wyszukiwania, ulubione, notatki, źródła, nieruchomości, oferty, użytkownicy |
 | Obsługa błędów API | `ApiError` z ProblemDetail, toasty (sonner), `applyApiErrors` (błędy pól → formularz), stany loading/empty/error |
+| Integracja z zewnętrznymi serwisami | adaptery live Otodom/OLX (`ingestion/adapter/http`) z robots.txt, limitem żądań i redakcją danych osobowych |
 | Mechanizm asynchroniczny | RabbitMQ (`ingestion/messaging`: kolejki, retry, DLQ) + eventy Springa (`@TransactionalEventListener`, `@Async`) |
 | Testy najważniejszej logiki | deduplikacja, ceny, cykl życia, limity, ochrona admina, optimistic locking, walidacja, alerty — [Testy](#testy) |
 | Uruchamianie przez Docker Compose | `docker-compose.yml` — `docker compose up --build` |

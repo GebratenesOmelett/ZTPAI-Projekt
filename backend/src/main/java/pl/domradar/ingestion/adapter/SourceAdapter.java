@@ -24,6 +24,20 @@ public interface SourceAdapter {
     default void checkAvailable(Source source) {
     }
 
+    /**
+     * Czy jeden import zwraca pełny obraz źródła. Wtedy obowiązuje reguła "3 kolejne importy bez wystąpienia
+     * = oferta nieaktywna". Adaptery live przeglądają tylko najnowsze strony wyników, więc dla nich oferta
+     * wygasa po {@link #staleDays(String)} dniach bez wystąpienia.
+     */
+    default boolean fullSnapshot() {
+        return true;
+    }
+
+    /** Dla importów częściowych: liczba dni bez wystąpienia, po której oferta staje się nieaktywna. */
+    default int staleDays(String sourceCode) {
+        return 14;
+    }
+
     /** Strumień surowych ogłoszeń. Strumień jest zamykany przez wywołującego. */
     Stream<RawListing> fetch(ImportContext ctx);
 }

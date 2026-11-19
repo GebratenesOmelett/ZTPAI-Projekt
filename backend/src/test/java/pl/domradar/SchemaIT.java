@@ -33,7 +33,8 @@ class SchemaIT {
         assertThat(cities.count()).isEqualTo(6);
         assertThat(districts.count()).isGreaterThan(40);
         assertThat(features.findByCode("BALCONY")).isPresent();
-        assertThat(sources.findByCode("otodom-live")).hasValueSatisfying(s -> assertThat(s.isEnabled()).isFalse());
+        assertThat(sources.findByCode("otodom-live")).hasValueSatisfying(s -> assertThat(s.getAdapter()).isEqualTo("otodom-http"));
+        assertThat(sources.findByCode("olx-live")).hasValueSatisfying(s -> assertThat(s.getAdapter()).isEqualTo("olx-api"));
     }
 
     @Test
