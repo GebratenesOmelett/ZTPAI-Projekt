@@ -110,6 +110,7 @@ app:
     missed-imports-to-deactivate: 3
     scheduler-enabled: true
     snapshots-dir: ${SNAPSHOTS_DIR:../data/snapshots}
+    eur-rate: 4.30
     demo:
       seed: 20261119
       universe-size: 1600

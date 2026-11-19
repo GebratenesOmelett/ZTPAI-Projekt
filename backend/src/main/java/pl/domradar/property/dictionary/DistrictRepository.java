@@ -12,4 +12,7 @@ public interface DistrictRepository extends JpaRepository<District, Long> {
 
     @EntityGraph(attributePaths = "city")
     List<District> findByCityIdOrderByNameAsc(Long cityId);
+
+    @EntityGraph(attributePaths = "city")
+    List<District> findAllByOrderByIdAsc();
 }

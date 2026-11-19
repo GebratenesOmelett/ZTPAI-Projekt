@@ -23,6 +23,11 @@ public interface OfferRepository extends JpaRepository<Offer, Long> {
 
     List<Offer> findByPropertyId(Long propertyId);
 
+    @EntityGraph(attributePaths = {"property"})
+    List<Offer> findBySourceIdAndActiveTrue(Long sourceId);
+
+    boolean existsBySourceId(Long sourceId);
+
     @EntityGraph(attributePaths = {"source", "property"})
     @Query("""
             select o from Offer o

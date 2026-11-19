@@ -59,6 +59,15 @@ public class ImportJob {
     @Column(name = "error_message")
     private String errorMessage;
 
+    @Column(name = "run_token", length = 36)
+    private String runToken;
+
+    @Column(nullable = false)
+    private int attempts;
+
+    @Column(name = "failed_batches", nullable = false)
+    private int failedBatches;
+
     public ImportJob(Source source, ImportTrigger trigger, String requestedBy) {
         this.source = source;
         this.trigger = trigger;
