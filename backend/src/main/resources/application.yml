@@ -86,9 +86,9 @@ springdoc:
   default-produces-media-type: application/json
 
 app:
-  public-url: ${APP_PUBLIC_URL:http://localhost:3000}
+  public-url: ${APP_PUBLIC_URL:http://localhost:3080}
   cors:
-    allowed-origins: ${APP_CORS_ORIGINS:http://localhost:5173,http://localhost:3000}
+    allowed-origins: ${APP_CORS_ORIGINS:http://localhost:5173,http://localhost:3080}
   jwt:
     secret: ${JWT_SECRET}
     issuer: domradar
