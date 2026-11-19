@@ -1,0 +1,19 @@
+# Profil deweloperski: uruchamianie backendu z IDE / mvnw przy infrastrukturze z docker compose.
+# Zmienne (hasła, sekret JWT) są wczytywane z pliku ../.env (który NIE jest w repozytorium).
+# Usługi są dostępne na portach hosta zdefiniowanych w .env.
+spring:
+  config:
+    import: optional:file:../.env[.properties]
+  datasource:
+    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB:domradar}
+  rabbitmq:
+    port: ${RABBITMQ_PORT:5672}
+  data:
+    redis:
+      port: ${REDIS_PORT:6379}
+  mail:
+    port: ${MAILPIT_SMTP_PORT:1025}
+
+logging:
+  level:
+    pl.domradar: DEBUG

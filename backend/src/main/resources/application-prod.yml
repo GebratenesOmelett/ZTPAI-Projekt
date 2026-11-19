@@ -1,0 +1,14 @@
+# Profil produkcyjny (używany w kontenerze Docker). Wszystkie sekrety wyłącznie ze zmiennych środowiskowych.
+app:
+  jwt:
+    cookie-secure: ${APP_COOKIE_SECURE:false}
+  ingestion:
+    snapshots-dir: ${SNAPSHOTS_DIR:/app/data/snapshots}
+
+springdoc:
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
+
+logging:
+  level:
+    pl.domradar: INFO

@@ -1,0 +1,22 @@
+# Profil testowy. Połączenia do Postgresa, RabbitMQ i Redisa dostarcza Testcontainers (@ServiceConnection).
+# Poniższe wartości to wyłącznie fikstury testowe (nie są sekretami żadnego środowiska).
+app:
+  jwt:
+    secret: test-only-jwt-secret-value-that-is-long-enough-123456
+  admin:
+    email: admin@test.local
+    password: AdminPass123!
+  demo-user:
+    email: ""
+    password: ""
+  ingestion:
+    bootstrap-import: false
+    scheduler-enabled: false
+    snapshots-dir: ../data/snapshots
+    demo:
+      universe-size: 300
+
+logging:
+  level:
+    pl.domradar: INFO
+    org.testcontainers: WARN
