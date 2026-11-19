@@ -49,8 +49,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/properties/**", "/api/v1/dictionaries/**",
                                 "/api/v1/stats/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/properties/search", "/api/v1/properties/search/map",
-                                "/api/v1/properties/compare").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/properties/search", "/api/v1/properties/search/map").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
                                 "/actuator/health/**", "/actuator/info", "/ws/**", "/error").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
