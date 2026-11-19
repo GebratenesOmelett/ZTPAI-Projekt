@@ -45,10 +45,9 @@ public class ImportScheduler {
                     || !CronExpression.isValidExpression(source.getImportCron())) {
                 continue;
             }
-            Instant base = jobRepository.findTopBySourceIdOrderByCreatedAtDesc(source.getId())
+            Instant lastRun = jobRepository.findTopBySourceIdOrderByCreatedAtDesc(source.getId())
                     .map(ImportJob::getCreatedAt).orElse(source.getCreatedAt());
-            ZonedDateTime next = CronExpression.parse(source.getImportCron()).next(base.atZone(ZONE));
-            if (next != null && !next.toInstant().isAfter(now)) {
+            if (isDue(source.getImportCron(), lastRun, now, ZONE)) {
                 try {
                     importService.requestImport(source.getId(), ImportTrigger.SCHEDULED, "scheduler");
                 } catch (DomainException e) {
@@ -56,6 +55,16 @@ public class ImportScheduler {
                 }
             }
         }
+    }
+
+    /**
+     * Import jest należny, gdy od ostatniego uruchomienia minął kolejny termin z wyrażenia cron.
+     * Np. dla "0 0 4 * * *" — raz dziennie o 4:00; jeśli aplikacja była wtedy wyłączona, import zostanie nadrobiony
+     * przy najbliższym sprawdzeniu po starcie (ale tylko raz, nie za każdy pominięty dzień).
+     */
+    static boolean isDue(String cron, Instant lastRun, Instant now, ZoneId zone) {
+        ZonedDateTime next = CronExpression.parse(cron).next(lastRun.atZone(zone));
+        return next != null && !next.toInstant().isAfter(now);
     }
 
     /** Zadania, których worker nie podjął w 15 min lub które trwają ponad 2 h, są oznaczane jako FAILED. */

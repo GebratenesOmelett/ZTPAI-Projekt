@@ -43,7 +43,7 @@ function SourceDialog({ source, open, onOpenChange, adapters }: {
     if (open) {
       form.reset(source
         ? { code: source.code, name: source.name, baseUrl: source.baseUrl, adapter: source.adapter, enabled: source.enabled, importCron: source.importCron ?? '' }
-        : { code: '', name: '', baseUrl: 'https://', adapter: 'demo', enabled: true, importCron: '0 0 */6 * * *' })
+        : { code: '', name: '', baseUrl: 'https://', adapter: 'demo', enabled: true, importCron: '0 0 4 * * *' })
     }
   }, [open, source, form])
 
@@ -82,7 +82,7 @@ function SourceDialog({ source, open, onOpenChange, adapters }: {
               </Select>
             )} />
           </FormField>
-          <FormField id="src-cron" label="Harmonogram (cron, 6 pól)" error={errors.importCron?.message} hint="np. 0 0 */6 * * * — co 6 godzin; puste = tylko ręcznie">
+          <FormField id="src-cron" label="Harmonogram (cron, 6 pól)" error={errors.importCron?.message} hint="np. 0 0 4 * * * — codziennie o 4:00; puste = tylko ręcznie">
             <Input id="src-cron" {...form.register('importCron')} />
           </FormField>
           <label className="flex items-center gap-2 text-sm">

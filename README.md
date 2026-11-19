@@ -70,7 +70,11 @@ Przy pierwszym starcie (pusta baza) backend automatycznie uruchamia import ze ws
 | `LIVE_SOURCES_ENABLED=true`, `DEMO_DATA_ENABLED=false` (domyślnie w `.env.example`) | pobranie najnowszych ogłoszeń z Otodom i OLX (6 miast × sprzedaż/wynajem, `LIVE_MAX_PAGES` stron) | po ok. 3 min ~2000 prawdziwych ofert, ~1900 nieruchomości |
 | `LIVE_SOURCES_ENABLED=false`, `DEMO_DATA_ENABLED=true` | dane syntetyczne, działa bez internetu | po ok. 1 min ~1250 nieruchomości z ~2500 ofert |
 
-Kolejne importy portali uruchamia scheduler co 6 godzin (lub admin przyciskiem „Importuj”).
+Ogłoszenia są zapisywane w bazie PostgreSQL (wolumen `pgdata`) — wejście na stronę nie łączy się z portalami,
+wyszukiwarka czyta wyłącznie z bazy. Kolejne importy uruchamia scheduler **raz dziennie** (Otodom 4:00, OLX 4:30;
+pominięty import jest nadrabiany po starcie aplikacji) lub admin przyciskiem „Importuj”. Godzinę można zmienić
+w panelu admina (harmonogram cron źródła). Uwaga: `docker compose down -v` usuwa wolumen z bazą — wtedy
+przy następnym starcie dane zostaną pobrane od nowa.
 
 | Adres | Co |
 |---|---|
@@ -471,8 +475,8 @@ Po zakończonym imporcie odświeżane są mediany dzielnic (`district_price_stat
 
 ## Testy
 
-- **Backend: 122 testy** (`./mvnw verify`):
-  - 18 klas testów jednostkowych (JUnit 5, Mockito, AssertJ): parsowanie odpowiedzi Otodom i OLX
+- **Backend: 125 testów** (`./mvnw verify`):
+  - 19 klas testów jednostkowych (JUnit 5, Mockito, AssertJ): harmonogram importów, parsowanie odpowiedzi Otodom i OLX
     (syntetyczne fikstury), redakcja danych kontaktowych, scoring deduplikacji, trigramy,
     parsery wartości, historia cen i `priceDropped`, cykl życia ofert, blokada równoległego importu,
     limity zapisanych wyszukiwań, ochrona ostatniego admina, optimistic locking, walidator kryteriów,
@@ -493,7 +497,7 @@ Po zakończonym imporcie odświeżane są mediany dzielnic (`district_price_stat
 - każde żądanie jest sprawdzane z `robots.txt` portalu (parser zgodny z RFC 9309: wzorce `*` i `$`,
   ścieżka razem z query stringiem); brak zgody = brak żądania;
 - min. 3 s odstępu między żądaniami, identyfikujący `User-Agent` (`LIVE_USER_AGENT` — warto dopisać kontakt),
-  domyślnie tylko 2 strony na miasto i rodzaj transakcji (~50 żądań na import), import co 6 godzin;
+  domyślnie tylko 2 strony na miasto i rodzaj transakcji (~50 żądań na import), import raz dziennie w nocy;
 - **bez logowania i bez obchodzenia zabezpieczeń**: odpowiedź HTTP 403/429 kończy pobieranie (bez ponowień);
 - **minimalizacja danych osobowych (RODO)**: nie pobieramy stron kontaktowych ani numerów telefonów,
   nie zapisujemy imion osób prywatnych (tylko „osoba prywatna” albo nazwa firmy), a z opisów usuwamy numery

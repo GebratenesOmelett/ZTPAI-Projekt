@@ -12,7 +12,7 @@ public record SourceDto(
         @Schema(example = "https://www.otodom.pl") String baseUrl,
         @Schema(example = "demo") String adapter,
         boolean enabled,
-        @Schema(example = "0 0 */6 * * *") String importCron,
+        @Schema(example = "0 0 4 * * *") String importCron,
         Instant lastImportAt,
         Instant createdAt) {
 }

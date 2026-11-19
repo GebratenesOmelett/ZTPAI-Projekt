@@ -22,6 +22,6 @@ public record SourceRequest(
 
         @Schema(example = "true") boolean enabled,
 
-        @Schema(example = "0 0 */6 * * *", description = "Wyrażenie cron Springa (6 pól) lub puste = brak automatycznych importów")
+        @Schema(example = "0 0 4 * * *", description = "Wyrażenie cron Springa (6 pól) lub puste = brak automatycznych importów")
         @ValidCron @Size(max = 100) String importCron) {
 }
