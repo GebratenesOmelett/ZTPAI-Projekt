@@ -88,6 +88,9 @@ public class RabbitConfig {
         return converter;
     }
 
+    /** Liczba równoległych importów (różnych źródeł). */
+    static final int IMPORT_WORKERS = 4;
+
     @Bean
     SimpleRabbitListenerContainerFactory importListenerFactory(SimpleRabbitListenerContainerFactoryConfigurer configurer,
                                                                ConnectionFactory connectionFactory,
@@ -96,8 +99,9 @@ public class RabbitConfig {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         configurer.configure(factory, connectionFactory);
         factory.setMessageConverter(converter);
-        factory.setConcurrentConsumers(1);
-        factory.setMaxConcurrentConsumers(2);
+        // każdy worker pobiera inny portal (jedno aktywne zadanie na źródło), więc limit żądań na portal jest zachowany
+        factory.setConcurrentConsumers(IMPORT_WORKERS);
+        factory.setMaxConcurrentConsumers(IMPORT_WORKERS);
         factory.setPrefetchCount(1);
         factory.setDefaultRequeueRejected(false);
         factory.setAdviceChain(RetryInterceptorBuilder.stateless()

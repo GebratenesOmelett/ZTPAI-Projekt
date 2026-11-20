@@ -22,8 +22,8 @@ import static org.mockito.Mockito.when;
 /** Parsowanie stron wyników kolejnych portali na syntetycznych fiksturach (bez sieci, bez prawdziwych ogłoszeń). */
 class MorePortalsParsingTest {
 
-    private static final PortalCity WARSZAWA = PortalCity.ALL.get(0);
-    private static final PortalCity GDANSK = PortalCity.ALL.get(3);
+    private static final PortalCity WARSZAWA = city("warszawa");
+    private static final PortalCity GDANSK = city("gdansk");
 
     private final LiveSourcesProperties props = new LiveSourcesProperties(Map.of());
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -31,6 +31,10 @@ class MorePortalsParsingTest {
 
     MorePortalsParsingTest() {
         when(dictionary.city(anyString())).thenReturn(Optional.empty());
+    }
+
+    private static PortalCity city(String slug) {
+        return PortalCity.ALL.stream().filter(c -> c.slug().equals(slug)).findFirst().orElseThrow();
     }
 
     private static String fixture(String name) throws IOException {
@@ -92,7 +96,7 @@ class MorePortalsParsingTest {
                 .isEqualTo("https://www.morizon.pl/do-wynajecia/mieszkania/warszawa/?page=2");
         assertThat(new DomiportaAdapter(props, objectMapper, dictionary).pageUrl(WARSZAWA, false, 1))
                 .isEqualTo("https://www.domiporta.pl/mieszkanie/sprzedam/mazowieckie/warszawa");
-        assertThat(new SzybkoAdapter(props).pageUrl(PortalCity.ALL.get(5), false, 2))
+        assertThat(new SzybkoAdapter(props).pageUrl(city("lodz"), false, 2))
                 .isEqualTo("https://szybko.pl/l/na-sprzedaz/lokal-mieszkalny/%C5%81%C3%B3d%C5%BA?sort=newest&page=2");
         assertThat(new AdresowoAdapter(props).pageUrl(WARSZAWA, true, 3)).isEqualTo("https://adresowo.pl/mieszkania-wynajem/warszawa/_l3");
         assertThat(new SprzedajemyAdapter(props).pageUrl(WARSZAWA, false, 3))
@@ -100,7 +104,13 @@ class MorePortalsParsingTest {
         TrojmiastoAdapter trojmiasto = new TrojmiastoAdapter(props);
         assertThat(trojmiasto.pageUrl(GDANSK, false, 2)).endsWith("/mieszkanie/?strona=1");
         assertThat(trojmiasto.pageUrl(GDANSK, true, 1)).as("brak listy wynajmu").isNull();
-        assertThat(trojmiasto.pageUrl(WARSZAWA, false, 1)).as("tylko Gdańsk").isNull();
+        assertThat(trojmiasto.pageUrl(WARSZAWA, false, 1)).as("tylko Trójmiasto").isNull();
+        assertThat(trojmiasto.pageUrl(city("gdynia"), false, 1)).as("lista wspólna z Gdańskiem — bez drugiego pobrania").isNull();
+        assertThat(OtodomHttpAdapter.CITY_PATHS)
+                .containsEntry("bialystok", "podlaskie/bialystok/bialystok/bialystok")
+                .hasSize(PortalCity.ALL.size());
+        assertThat(OlxApiAdapter.CITY_IDS.keySet()).as("OLX obsługuje wszystkie miasta")
+                .containsExactlyElementsOf(PortalCity.ALL.stream().map(PortalCity::slug).toList());
     }
 
     @Test
@@ -197,11 +207,14 @@ class MorePortalsParsingTest {
     }
 
     @Test
-    void trojmiastoCardsAreLimitedToGdansk() throws IOException {
+    void trojmiastoCardsGetCityFromSubtitle() throws IOException {
         PagedPortalAdapter.Page page = new TrojmiastoAdapter(props).parsePage(fixture("html-portals.html"), GDANSK, false);
 
         assertThat(page.hasMore()).isTrue();
-        assertThat(page.listings()).extracting(RawListing::externalId).containsExactly("6000001");
+        // wspólna lista Gdańska i Gdyni pobierana raz; miasto z podtytułu karty, Sopot pomijany
+        assertThat(page.listings()).extracting(RawListing::externalId).containsExactly("6000001", "6000002", "6000003");
+        assertThat(page.listings()).extracting(RawListing::city).containsExactly("Gdańsk", "Gdynia", "Gdańsk");
+        assertThat(page.listings().get(1).district()).isEqualTo("Orłowo");
         RawListing r = page.listings().getFirst();
         assertThat(ValueParsers.parseAmount(r.priceText())).hasValueSatisfying(p -> assertThat(p).isEqualByComparingTo("1165000"));
         assertThat(r.areaText()).isEqualTo("81.35");

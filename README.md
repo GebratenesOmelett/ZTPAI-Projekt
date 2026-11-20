@@ -68,7 +68,7 @@ Przy pierwszym starcie (pusta baza) backend automatycznie uruchamia import ze ws
 
 | Tryb (`.env`) | Co się dzieje | Wynik po starcie |
 |---|---|---|
-| `LIVE_SOURCES_ENABLED=true`, `DEMO_DATA_ENABLED=false` (domyślnie w `.env.example`) | pobranie najnowszych ogłoszeń z 11 portali (6 miast × sprzedaż/wynajem, `LIVE_MAX_PAGES` stron; importy kolejno, każdy 1–2 min) | po ok. 15 min ~8800 prawdziwych ofert, ~6700 nieruchomości (~1500 z ofertami z kilku portali) |
+| `LIVE_SOURCES_ENABLED=true`, `DEMO_DATA_ENABLED=false` (domyślnie w `.env.example`) | pobranie najnowszych ogłoszeń z 11 portali (17 miast × sprzedaż/wynajem, `LIVE_MAX_PAGES` stron; 4 portale równolegle) | przy `LIVE_MAX_PAGES=2` (domyślnie) kilkanaście minut; przy maksymalnym `LIVE_MAX_PAGES=10` ok. 1 h i ~50 tys. nieruchomości z ~80 tys. ofert (~17 tys. z ofertami z kilku portali) |
 | `LIVE_SOURCES_ENABLED=false`, `DEMO_DATA_ENABLED=true` | dane syntetyczne, działa bez internetu | po ok. 1 min ~1250 nieruchomości z ~2500 ofert |
 
 Ogłoszenia są zapisywane w bazie PostgreSQL (wolumen `pgdata`) — wejście na stronę nie łączy się z portalami,
@@ -136,14 +136,15 @@ Testy: `cd backend && ./mvnw verify` (wymaga Dockera — Testcontainers) oraz `c
 **Wyszukiwarka (publiczna)**
 - pełnotekstowe wyszukiwanie po polsku (tsvector + `unaccent`, dopasowanie prefiksowe zamiast stemmera),
   tolerancja literówek (`pg_trgm`, np. `mkotow` → Mokotów), wykluczanie słów (`-parter -suterena`), filtr ulicy,
-- filtry: transakcja, typ, rynek, miasta i dzielnice (wielokrotny wybór), cena, cena/m², metraż, pokoje (1…5+),
+- filtry: transakcja, typ, rynek, miasta i dzielnice (wielokrotny wybór; dzielnice dostępne po wybraniu miasta), cena, cena/m², metraż, pokoje (1…5+),
   piętro od–do, „nie parter”, „nie ostatnie piętro”, liczba pięter, rok budowy, cechy (tryb ALL/ANY),
   portale (include/exclude), tylko prywatne / tylko biura, obszar mapy (bbox), promień od punktu,
   poligon GeoJSON, dodane w ostatnich N dniach, obniżka w ostatnich N dniach, minimalny % obniżki,
   dni na rynku, tylko nieruchomości z ≥ 2 portali, archiwalne,
 - sortowanie wielokluczowe: trafność, cena, cena/m², metraż, data dodania, data zmiany ceny, % obniżki,
   dni na rynku, odległość od punktu, % względem mediany dzielnicy,
-- fasety z liczebnościami (dzielnice, pokoje, typy, portale) i histogram cen,
+- szybki przedział ceny „od – do” nad wynikami; mapę obok listy można zwinąć i wysunąć,
+- fasety z liczebnościami i histogram cen w API (`facets` w odpowiedzi wyszukiwania) — w interfejsie te same wymiary są w panelu filtrów,
 - paginacja `page`/`size` (max 100) z `totalElements` i `totalPages`,
 - przy każdym wyniku: „X% poniżej/powyżej mediany dzielnicy”,
 - widok listy, mapy (klastrowanie) i podzielony; stan filtrów w URL (link do udostępnienia),
@@ -473,11 +474,13 @@ Po zakończonym imporcie odświeżane są mediany dzielnic (`district_price_stat
 | 6 | Admin nie może zdegradować/zablokować/usunąć siebie ani ostatniego aktywnego admina → 409. | `user/AdminProtectionPolicy`, `UserAdminService` | `AdminProtectionPolicyTest`, `AdminIT` |
 | 7 | Edycja nieruchomości z optimistic locking → 409 przy konflikcie wersji. | `property/admin/PropertyAdminService#checkVersion` + `@Version` w `Property` | `PropertyVersionCheckTest`, `AdminIT` |
 | 8 | Walidacja kryteriów: min ≤ max, poligon poprawny i ≤ 100 punktów, promień ≤ 50 km. | `search/validation/SearchCriteriaValidator` (`@ValidSearchCriteria`) | `SearchCriteriaValidatorTest`, `SearchIT` |
+| 9 | Automatyczne rozdzielenie sprzedaży i najmu: mieszkanie/dom „na sprzedaż” tańsze niż 250 zł/m² (np. 2500 zł za 50 m²) to najem, a „na wynajem” droższe niż 1000 zł/m² to sprzedaż — portale często mają ogłoszenia w złej kategorii. Zakresy się nie pokrywają (czynsz ≤ ~400 zł/m², sprzedaż ≥ ~300 zł/m²), wartości pośrednie nie są zmieniane. Gdy kategoria zmieni się przy ponownym imporcie, nieruchomość z jedną ofertą zmienia rodzaj, a oferta scalona z innymi portalami przechodzi do nowej nieruchomości. Dane sprzed reguły poprawia migracja `V13`. | `ingestion/normalize/TransactionClassifier` (w `ListingNormalizer`), `ListingUpsertService#changeTransaction`, `db/migration/V13__fix_misclassified_transactions` | `TransactionClassifierTest`, `ListingUpsertTransactionChangeTest` |
+| 10 | Odrzucanie cen i metraży, które nie opisują oferty: cena < 100 zł („1 zł”, „za opiekę”), najem mieszkania/domu < 500 zł lub < 10 zł/m² (cena za dobę albo za osobę); metraż mieszkania > 400 m² lub domu > 2000 m² (np. 5158 zamiast 51,58) zastępowany metrażem z tytułu, a bez niego ogłoszenie jest odrzucane. Dane sprzed reguły porządkuje migracja `V14`. | `ingestion/normalize/PricePlausibility`, `AreaPlausibility` (w `ListingNormalizer`), `V14__deactivate_implausible_prices.sql` | `PricePlausibilityTest`, `AreaPlausibilityTest` |
 
 ## Testy
 
-- **Backend: 137 testów** (`./mvnw verify`):
-  - 21 klas testów jednostkowych (JUnit 5, Mockito, AssertJ): harmonogram importów, parsowanie stron wyników
+- **Backend: 173 testy** (`./mvnw verify`):
+  - 25 klas testów jednostkowych (JUnit 5, Mockito, AssertJ): harmonogram importów, korekta sprzedaż/najem, wiarygodność ceny i metrażu, parsowanie stron wyników
     wszystkich 11 portali (syntetyczne fikstury, bez sieci), redakcja danych kontaktowych, scoring deduplikacji, trigramy,
     parsery wartości, historia cen i `priceDropped`, cykl życia ofert, blokada równoległego importu,
     limity zapisanych wyszukiwań, ochrona ostatniego admina, optimistic locking, walidator kryteriów,
@@ -498,17 +501,23 @@ w JSON-LD korzystają ze wspólnego `SchemaOrgListings`.
 
 | Portal | Źródło (`code`) | Adapter | Skąd dane | Zakres |
 |---|---|---|---|---|
-| Otodom | `otodom-live` | `OtodomHttpAdapter` | JSON `__NEXT_DATA__` stron wyników | 6 miast, sprzedaż + wynajem |
-| OLX | `olx-live` | `OlxApiAdapter` | publiczne API `/api/v1/offers/` | 6 miast, sprzedaż + wynajem |
-| Morizon | `morizon-live` | `MorizonAdapter` | JSON-LD (schema.org `Offer`) | 6 miast, sprzedaż + wynajem |
-| Gratka | `gratka-live` | `GratkaAdapter` | JSON-LD (schema.org `Offer`) | 6 miast, sprzedaż + wynajem |
-| Nieruchomości-online | `nieruchomosci-online-live` | `NieruchomosciOnlineAdapter` | JSON-LD + dzielnica z kafelka HTML; serwisy miejskie (`warszawa.nieruchomosci-online.pl` …) | 6 miast, sprzedaż + wynajem |
-| Domiporta | `domiporta-live` | `DomiportaAdapter` | JSON-LD (schema.org `RealEstateListing`) | 6 miast, sprzedaż + wynajem |
-| GetHome | `gethome-live` | `GetHomeAdapter` | stan aplikacji `__INITIAL_STATE__` (JSON) | 6 miast, sprzedaż + wynajem |
-| Szybko.pl | `szybko-live` | `SzybkoAdapter` | mikrodane schema.org kart wyników | 6 miast, sprzedaż + wynajem |
-| Adresowo | `adresowo-live` | `AdresowoAdapter` | karty wyników HTML | 6 miast, sprzedaż + wynajem |
-| Sprzedajemy.pl | `sprzedajemy-live` | `SprzedajemyAdapter` | karty wyników HTML | 6 miast, sprzedaż + wynajem |
-| Trojmiasto.pl | `trojmiasto-live` | `TrojmiastoAdapter` | karty wyników HTML | Gdańsk, sprzedaż (rynek wtórny) |
+| Otodom | `otodom-live` | `OtodomHttpAdapter` | JSON `__NEXT_DATA__` stron wyników | 17 miast, sprzedaż + wynajem |
+| OLX | `olx-live` | `OlxApiAdapter` | publiczne API `/api/v1/offers/` | 17 miast, sprzedaż + wynajem |
+| Morizon | `morizon-live` | `MorizonAdapter` | JSON-LD (schema.org `Offer`) | 17 miast, sprzedaż + wynajem |
+| Gratka | `gratka-live` | `GratkaAdapter` | JSON-LD (schema.org `Offer`) | 17 miast, sprzedaż + wynajem |
+| Nieruchomości-online | `nieruchomosci-online-live` | `NieruchomosciOnlineAdapter` | JSON-LD + dzielnica z kafelka HTML; serwisy miejskie (`warszawa.nieruchomosci-online.pl` …) | 17 miast, sprzedaż + wynajem |
+| Domiporta | `domiporta-live` | `DomiportaAdapter` | JSON-LD (schema.org `RealEstateListing`) | 17 miast, sprzedaż + wynajem |
+| GetHome | `gethome-live` | `GetHomeAdapter` | stan aplikacji `__INITIAL_STATE__` (JSON) | 17 miast, sprzedaż + wynajem |
+| Szybko.pl | `szybko-live` | `SzybkoAdapter` | mikrodane schema.org kart wyników | 17 miast, sprzedaż + wynajem |
+| Adresowo | `adresowo-live` | `AdresowoAdapter` | karty wyników HTML | 17 miast, sprzedaż + wynajem |
+| Sprzedajemy.pl | `sprzedajemy-live` | `SprzedajemyAdapter` | karty wyników HTML | 17 miast, sprzedaż + wynajem |
+| Trojmiasto.pl | `trojmiasto-live` | `TrojmiastoAdapter` | karty wyników HTML | Gdańsk i Gdynia, sprzedaż (rynek wtórny) |
+
+**Miasta (17):** Warszawa, Kraków, Wrocław, Gdańsk, Poznań, Łódź, Szczecin, Bydgoszcz, Lublin, Białystok, Katowice,
+Gdynia, Rzeszów, Toruń, Kielce, Olsztyn, Opole. Lista jest w `PortalCity` (adresy URL portali), a słownik miast
+i dzielnic w migracjach `V4`, `V9`, `V12` (centroidy dzielnic nowych miast wyznaczono jednorazowo z danych
+OpenStreetMap). `LIVE_CITIES` (np. `warszawa,krakow`) ogranicza import do wybranych miast. Importy różnych portali
+działają równolegle (4 workery) — każdy worker pobiera inny portal, więc limit żądań na portal jest zachowany.
 
 Portale z listy, których **nie** podłączono, i powód:
 
@@ -653,7 +662,7 @@ Kafelki mapy pochodzą z OpenStreetMap (zgodnie z polityką użytkowania kafelk�
 | Paginacja | wyszukiwarka, ulubione, powiadomienia, importy, nieruchomości/oferty/użytkownicy (admin) — `PageResponse` |
 | Wyszukiwanie / filtrowanie | `search/` — `SearchSqlBuilder`, `SearchService`, fasety; filtry list admina |
 | Dokumentacja API (Swagger/OpenAPI) | springdoc, `common/config/OpenApiConfig`, adnotacje `@Operation`/`@Schema`, `/swagger-ui.html` |
-| Min. 5 testów jednostkowych logiki | 21 klas testów jednostkowych (np. `DedupScorerTest`, `PriceAnalyzerTest`, `SavedSearchServiceTest`) |
+| Min. 5 testów jednostkowych logiki | 25 klas testów jednostkowych (np. `DedupScorerTest`, `PriceAnalyzerTest`, `SavedSearchServiceTest`) |
 | Min. 3 testy integracyjne REST API | 7 klas `*IT` z MockMvc + Testcontainers |
 | Migracje schematu | Flyway `V1`–`V9` w `db/migration` |
 | Zarządzanie konfiguracją | `application.yml` + profile dev/test/prod, `@ConfigurationProperties` (rekordy), `.env` |

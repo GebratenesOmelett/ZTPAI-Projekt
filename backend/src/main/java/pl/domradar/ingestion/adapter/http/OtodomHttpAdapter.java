@@ -24,16 +24,12 @@ public class OtodomHttpAdapter extends HttpPortalAdapter {
 
     static final String BASE = "https://www.otodom.pl";
 
-    /** Slug miasta w słowniku → ścieżka lokalizacji w adresach Otodom. */
+    /** Slug miasta w słowniku → ścieżka lokalizacji w adresach Otodom (województwo/powiat/gmina/miejscowość). */
     static final Map<String, String> CITY_PATHS = new LinkedHashMap<>();
 
     static {
-        CITY_PATHS.put("warszawa", "mazowieckie/warszawa/warszawa/warszawa");
-        CITY_PATHS.put("krakow", "malopolskie/krakow/krakow/krakow");
-        CITY_PATHS.put("wroclaw", "dolnoslaskie/wroclaw/wroclaw/wroclaw");
-        CITY_PATHS.put("gdansk", "pomorskie/gdansk/gdansk/gdansk");
-        CITY_PATHS.put("poznan", "wielkopolskie/poznan/poznan/poznan");
-        CITY_PATHS.put("lodz", "lodzkie/lodz/lodz/lodz");
+        // miasta na prawach powiatu: powiat, gmina i miejscowość mają ten sam slug
+        PortalCity.ALL.forEach(c -> CITY_PATHS.put(c.slug(), c.voivodeship() + "/" + c.slug() + "/" + c.slug() + "/" + c.slug()));
     }
 
     private static final Map<String, String> TRANSACTIONS = Map.of("sprzedaz", "sprzedaż", "wynajem", "wynajem");

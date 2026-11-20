@@ -30,8 +30,8 @@ class SchemaIT {
     void migrationsCreateExtensionsAndDictionaries() {
         assertThat(jdbc.queryForList("select extname from pg_extension", String.class))
                 .contains("postgis", "pg_trgm", "unaccent");
-        assertThat(cities.count()).isEqualTo(6);
-        assertThat(districts.count()).isGreaterThan(40);
+        assertThat(cities.count()).isEqualTo(17);
+        assertThat(districts.count()).isGreaterThan(300);
         assertThat(features.findByCode("BALCONY")).isPresent();
         assertThat(sources.findByCode("otodom-live")).hasValueSatisfying(s -> assertThat(s.getAdapter()).isEqualTo("otodom-http"));
         assertThat(sources.findByCode("olx-live")).hasValueSatisfying(s -> assertThat(s.getAdapter()).isEqualTo("olx-api"));

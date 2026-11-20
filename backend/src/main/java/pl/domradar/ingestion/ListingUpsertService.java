@@ -72,6 +72,11 @@ public class ListingUpsertService {
             boolean changed = applyUpdate(offer, listing, now);
             OfferLifecyclePolicy.markSeen(offer, jobId, now);
             property = offer.getProperty();
+            if (property.getTransactionType() != listing.transactionType()) {
+                // portal przeniósł ogłoszenie do innej kategorii albo zmiana ceny ujawniła błędną kategorię
+                property = changeTransaction(offer, listing, now);
+                changed = true;
+            }
             if (!changed && !reactivated) {
                 property.setLastSeenAt(now);
                 return Outcome.UNCHANGED;
@@ -101,6 +106,27 @@ public class ListingUpsertService {
             events.publishEvent(new PriceDroppedEvent(property.getId(), jobId, result.priceBefore(), result.priceAfter()));
         }
         return outcome;
+    }
+
+    /**
+     * Rodzaj transakcji oferty różni się od jej nieruchomości: nieruchomość z jedną ofertą zmienia rodzaj,
+     * a oferta scalona z ofertami innych portali przechodzi do nowej nieruchomości (pozostałe oferty nie są ruszane).
+     */
+    private Property changeTransaction(Offer offer, NormalizedListing listing, Instant now) {
+        Property current = offer.getProperty();
+        List<Offer> siblings = offerRepository.findByPropertyId(current.getId()).stream()
+                .filter(o -> !o.getId().equals(offer.getId())).toList();
+        if (siblings.isEmpty()) {
+            current.setTransactionType(listing.transactionType());
+            current.setFingerprint(PropertyFactory.fingerprint(listing.cityId(), listing.districtId(), listing.propertyType(),
+                    listing.transactionType(), listing.area(), listing.rooms(), listing.floor(), listing.street()));
+            return current;
+        }
+        Property moved = propertyRepository.save(newProperty(listing, now));
+        offer.setProperty(moved);
+        offerRepository.flush();
+        recalculator.recalculate(current, siblings);
+        return moved;
     }
 
     /** @return true, jeśli zmieniła się cena lub istotne dane oferty */

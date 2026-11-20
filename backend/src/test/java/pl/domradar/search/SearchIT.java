@@ -191,7 +191,7 @@ class SearchIT {
 
     @Test
     void dictionariesStatsAndMapPoints() throws Exception {
-        mvc.perform(get("/api/v1/dictionaries/cities")).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(6));
+        mvc.perform(get("/api/v1/dictionaries/cities")).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(17));
         mvc.perform(get("/api/v1/dictionaries/districts").param("cityId", warsawId.toString()))
                 .andExpect(status().isOk()).andExpect(jsonPath("$[0].cityId").value(warsawId));
         mvc.perform(get("/api/v1/dictionaries/features")).andExpect(status().isOk());

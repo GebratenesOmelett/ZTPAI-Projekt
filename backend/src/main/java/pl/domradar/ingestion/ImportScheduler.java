@@ -68,14 +68,14 @@ public class ImportScheduler {
     }
 
     /**
-     * Zadania, których worker nie podjął w 60 min lub które trwają ponad 2 h, są oznaczane jako FAILED.
-     * Limit kolejkowania uwzględnia pierwszy start z kilkunastoma źródłami: importy portali (każdy 1–2 min
-     * z limitem żądań) czekają w kolejce na wolnego workera.
+     * Zadania, których worker nie podjął w 3 h lub które trwają ponad 2 h, są oznaczane jako FAILED.
+     * Limit kolejkowania uwzględnia pierwszy start z kilkunastoma źródłami: importy portali (przy wielu miastach
+     * i stronach nawet kilkanaście minut każdy, z limitem żądań) czekają w kolejce na wolnego workera.
      */
     @Scheduled(fixedDelayString = "PT5M", initialDelayString = "PT2M")
     public void failStuckJobs() {
         Instant now = clock.instant();
-        jobRepository.findByStatusAndCreatedAtBefore(ImportStatus.QUEUED, now.minus(60, ChronoUnit.MINUTES))
+        jobRepository.findByStatusAndCreatedAtBefore(ImportStatus.QUEUED, now.minus(3, ChronoUnit.HOURS))
                 .forEach(job -> jobService.markFailed(job.getId(), "Zadanie nie zostało podjęte przez workera (timeout)"));
         jobRepository.findByStatusAndStartedAtBefore(ImportStatus.RUNNING, now.minus(2, ChronoUnit.HOURS))
                 .forEach(job -> jobService.markFailed(job.getId(), "Przekroczono maksymalny czas importu"));

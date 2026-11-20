@@ -54,10 +54,19 @@ public class ListingNormalizer {
         PropertyType type = ValueParsers.parsePropertyType(raw.propertyTypeText())
                 .or(() -> ValueParsers.parsePropertyType(title))
                 .orElseThrow(() -> new NormalizationException("nieznany typ nieruchomości: " + raw.propertyTypeText()));
-        TransactionType transaction = ValueParsers.parseTransaction(raw.transactionText())
+        BigDecimal declaredArea = area;
+        area = AreaPlausibility.plausibleArea(type, area, title)
+                .orElseThrow(() -> new NormalizationException("nierealny metraż: " + declaredArea + " m²"));
+        TransactionType declared = ValueParsers.parseTransaction(raw.transactionText())
                 .or(() -> ValueParsers.parseTransaction(context))
                 .or(() -> ValueParsers.parseTransaction(raw.priceText()))
                 .orElse(TransactionType.SALE);
+        // ogłoszenia w złej kategorii portalu (np. "sprzedaż" za 2500 zł) — korekta po cenie za m²
+        TransactionType transaction = TransactionClassifier.classify(declared, type, price, area);
+        Optional<String> implausible = PricePlausibility.rejectionReason(type, transaction, price, area);
+        if (implausible.isPresent()) {
+            throw new NormalizationException(implausible.get());
+        }
 
         CityRef city = dictionary.city(raw.city())
                 .orElseThrow(() -> new NormalizationException("miasto spoza słownika: " + raw.city()));

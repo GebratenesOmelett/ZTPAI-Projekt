@@ -20,11 +20,25 @@ public final class ValueParsers {
     private static final Pattern NUMBER = Pattern.compile("\\d[\\d\\s.,]*");
     private static final Pattern INTEGER = Pattern.compile("-?\\d+");
     private static final Pattern YEAR = Pattern.compile("(18|19|20)\\d{2}");
+    /** Metraż zapisany w tekście, np. "42 m²", "51,58m²", "47 m2", "60mkw". */
+    // bez końcówek liczb grupowanych spacją ("3 138 m²" to nie 138 m²); spacje także twarde (U+00A0)
+    private static final Pattern AREA_IN_TEXT = Pattern.compile(
+            "(?<![\\d.,])(?<!\\d[\\s\\u00a0])(\\d{1,4}(?:[.,]\\d{1,2})?)[\\s\\u00a0]?(?:m²|m2|mkw|m\\.?\\s?kw)",
+            Pattern.CASE_INSENSITIVE);
 
     private ValueParsers() {
     }
 
     public record FloorInfo(Integer floor, Integer totalFloors) {
+    }
+
+    /** Pierwszy metraż zapisany w tekście (np. w tytule ogłoszenia). */
+    public static Optional<BigDecimal> areaInText(String text) {
+        if (text == null) {
+            return Optional.empty();
+        }
+        Matcher m = AREA_IN_TEXT.matcher(text);
+        return m.find() ? Optional.of(new BigDecimal(m.group(1).replace(',', '.'))) : Optional.empty();
     }
 
     /** Pierwsza liczba w tekście, z rozpoznaniem separatora tysięcy i części dziesiętnej. */

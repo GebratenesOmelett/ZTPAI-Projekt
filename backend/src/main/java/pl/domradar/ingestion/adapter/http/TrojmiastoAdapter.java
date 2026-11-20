@@ -12,14 +12,18 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Ogłoszenia Trojmiasto.pl — regionalny serwis Trójmiasta. Obsługiwana jest sprzedaż mieszkań (rynek wtórny);
- * z wyników brane są tylko oferty z Gdańska (Gdynia i Sopot nie należą do słownika miast DomRadaru).
+ * Ogłoszenia Trojmiasto.pl — regionalny serwis Trójmiasta. Obsługiwana jest sprzedaż mieszkań (rynek wtórny).
+ * Wspólna lista obejmuje Gdańsk i Gdynię, więc strony są pobierane raz (w przebiegu dla Gdańska), a miasto
+ * jest ustalane dla każdej karty; oferty z Sopotu i okolic są pomijane (spoza słownika miast).
  * Paginacja parametrem {@code strona} liczonym od zera.
  */
 @Component
 public class TrojmiastoAdapter extends PagedPortalAdapter {
 
     private static final String BASE = "https://ogloszenia.trojmiasto.pl";
+    /** Miasta ze wspólnej listy portalu, które są w słowniku DomRadaru. */
+    private static final List<PortalCity> TRICITY = PortalCity.ALL.stream()
+            .filter(c -> c.slug().equals("gdansk") || c.slug().equals("gdynia")).toList();
 
     public TrojmiastoAdapter(LiveSourcesProperties liveProperties) {
         super(liveProperties);
@@ -32,7 +36,7 @@ public class TrojmiastoAdapter extends PagedPortalAdapter {
 
     @Override
     public String description() {
-        return "Prawdziwe ogłoszenia z ogloszenia.trojmiasto.pl (sprzedaż mieszkań w Gdańsku)";
+        return "Prawdziwe ogłoszenia z ogloszenia.trojmiasto.pl (sprzedaż mieszkań w Gdańsku i Gdyni)";
     }
 
     @Override
@@ -55,13 +59,13 @@ public class TrojmiastoAdapter extends PagedPortalAdapter {
         List<Element> cards = doc.select(".list__item[data-id]");
         List<RawListing> result = new ArrayList<>();
         for (Element card : cards) {
-            toRaw(card, city).ifPresent(result::add);
+            toRaw(card).ifPresent(result::add);
         }
-        // karty spoza Gdańska są pomijane, więc o kolejnej stronie decyduje pager, a nie liczba wyników
+        // karty spoza słownika miast są pomijane, więc o kolejnej stronie decyduje pager, a nie liczba wyników
         return new Page(result, !cards.isEmpty() && doc.selectFirst(".pages__controls__next") != null);
     }
 
-    static Optional<RawListing> toRaw(Element card, PortalCity city) {
+    static Optional<RawListing> toRaw(Element card) {
         Element link = card.selectFirst("a.list__item__content__title__name[href]");
         String price = HtmlText.text(card.selectFirst(".list__item__price__value"));
         String area = HtmlText.firstNumber(detail(card, "powierzchnia"));
@@ -73,9 +77,12 @@ public class TrojmiastoAdapter extends PagedPortalAdapter {
         int comma = subtitle.indexOf(',');
         String place = (comma >= 0 ? subtitle.substring(0, comma) : subtitle).trim();
         String street = comma >= 0 ? subtitle.substring(comma + 1).trim() : null;
-        if (!TextNormalizer.key(place).startsWith(TextNormalizer.key(city.name()))) {
+        Optional<PortalCity> cityMatch = TRICITY.stream()
+                .filter(c -> TextNormalizer.key(place).startsWith(TextNormalizer.key(c.name()))).findFirst();
+        if (cityMatch.isEmpty()) {
             return Optional.empty();
         }
+        PortalCity city = cityMatch.get();
         String district = place.substring(Math.min(city.name().length(), place.length())).trim();
         String url = link.absUrl("href");
         Element logo = card.selectFirst("img.img-logo[title]");

@@ -1,12 +1,12 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { Columns2, List, Map as MapIcon, Search, SlidersHorizontal, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Columns2, List, Map as MapIcon, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { EmptyState, ErrorState, LoadingState } from '@/components/common/States'
 import { PaginationBar } from '@/components/common/PaginationBar'
-import { FacetsBar } from '@/components/search/FacetsBar'
 import { FiltersPanel } from '@/components/search/FiltersPanel'
+import { PriceRangeBar } from '@/components/search/PriceRangeBar'
 import { PropertyCard } from '@/components/search/PropertyCard'
 import { SaveSearchDialog, type EditingSavedSearch } from '@/components/search/SaveSearchDialog'
 import { SearchMap } from '@/components/search/SearchMap'
@@ -131,11 +131,20 @@ export default function SearchPage() {
           {result.isFetching && !result.isLoading && <span className="text-muted-foreground">Odświeżanie…</span>}
         </div>
 
-        <FacetsBar facets={data?.facets} criteria={state.criteria} onChange={updateCriteria} />
+        <PriceRangeBar key={`${state.criteria.priceMin ?? ''}-${state.criteria.priceMax ?? ''}`}
+                       criteria={state.criteria} onChange={updateCriteria} />
 
-        <div className={cn('grid gap-4', view === 'split' && 'xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]')}>
+        <div className={cn('relative grid gap-4', view === 'split' && 'xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]')}>
+          {view === 'list' && (
+            // zwinięta mapa: wysuwana zakładką przy prawej krawędzi (na szerokich ekranach)
+            <Button variant="outline" size="sm" onClick={() => setView('split')}
+                    className="fixed top-1/2 right-0 z-30 hidden h-auto -translate-y-1/2 flex-col gap-1 rounded-r-none px-1.5 py-3 shadow xl:flex"
+                    aria-label="Pokaż mapę" title="Pokaż mapę">
+              <ChevronLeft /><MapIcon /><span className="text-xs [writing-mode:vertical-rl]">Mapa</span>
+            </Button>
+          )}
           {view !== 'map' && (
-            <div className="min-w-0 space-y-3">
+            <div className={cn('min-w-0 space-y-3', view === 'list' && 'xl:pr-8')}>
               {result.isLoading && <LoadingState label="Szukamy nieruchomości…" />}
               {result.isError && !data && <ErrorState error={result.error} onRetry={() => result.refetch()} />}
               {data && data.content.length === 0 && (
@@ -151,8 +160,18 @@ export default function SearchPage() {
             </div>
           )}
           {view !== 'list' && (
-            <SearchMap criteria={state.criteria} onChange={updateCriteria} highlightedId={highlighted}
-                       className={cn(view === 'map' ? 'h-[calc(100svh-14rem)]' : 'h-[70vh] xl:sticky xl:top-18 xl:h-[calc(100svh-6rem)]')} />
+            <div className={cn('relative min-w-0 duration-300 animate-in fade-in slide-in-from-right-8',
+              view === 'split' && 'xl:sticky xl:top-18 xl:self-start')}>
+              {view === 'split' && (
+                <Button variant="outline" size="sm" onClick={() => setView('list')}
+                        className="absolute top-1/2 -left-3 z-[1100] hidden h-auto -translate-y-1/2 flex-col gap-1 px-1 py-3 shadow xl:flex"
+                        aria-label="Zwiń mapę" title="Zwiń mapę">
+                  <ChevronRight />
+                </Button>
+              )}
+              <SearchMap criteria={state.criteria} onChange={updateCriteria} highlightedId={highlighted}
+                         className={cn(view === 'map' ? 'h-[calc(100svh-14rem)]' : 'h-[70vh] xl:h-[calc(100svh-6rem)]')} />
+            </div>
           )}
         </div>
       </section>

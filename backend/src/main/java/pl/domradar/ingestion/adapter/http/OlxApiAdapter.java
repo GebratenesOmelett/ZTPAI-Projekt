@@ -33,6 +33,18 @@ public class OlxApiAdapter extends HttpPortalAdapter {
         CITY_IDS.put("gdansk", 5659);
         CITY_IDS.put("poznan", 13983);
         CITY_IDS.put("lodz", 10609);
+        // identyfikatory z /api/v1/friendly-links/query-params/nieruchomosci,mieszkania,<miasto>/ (dozwolone w robots.txt)
+        CITY_IDS.put("szczecin", 16705);
+        CITY_IDS.put("bydgoszcz", 4019);
+        CITY_IDS.put("lublin", 10119);
+        CITY_IDS.put("bialystok", 1079);
+        CITY_IDS.put("katowice", 7691);
+        CITY_IDS.put("gdynia", 5849);
+        CITY_IDS.put("rzeszow", 15241);
+        CITY_IDS.put("torun", 38395);
+        CITY_IDS.put("kielce", 7971);
+        CITY_IDS.put("olsztyn", 12673);
+        CITY_IDS.put("opole", 12885);
     }
 
     /** Kategorie OLX: 14 = Mieszkania / Sprzedaż, 15 = Mieszkania / Wynajem. */

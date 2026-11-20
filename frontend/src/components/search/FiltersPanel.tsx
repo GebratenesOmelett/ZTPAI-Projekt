@@ -33,11 +33,27 @@ export function FiltersPanel({ criteria, onApply, onClose }: {
 
   const set = <K extends keyof Criteria>(key: K, value: Criteria[K]) => setDraft((d) => ({ ...d, [key]: value }))
 
-  const visibleDistricts = useMemo(() => {
-    const all = districts.data ?? []
-    const selectedCities = draft.cityIds ?? []
-    return selectedCities.length ? all.filter((d) => selectedCities.includes(d.cityId)) : all
-  }, [districts.data, draft.cityIds])
+  // Wybrane miasta; stary link/zapisane wyszukiwanie z samymi dzielnicami pokazuje też ich miasta,
+  // żeby wybrane dzielnice były widoczne (wynik wyszukiwania jest ten sam).
+  const selectedCityIds = useMemo(() => {
+    const ids = new Set(draft.cityIds ?? [])
+    for (const id of draft.districtIds ?? []) {
+      const district = districts.data?.find((d) => d.id === id)
+      if (district) ids.add(district.cityId)
+    }
+    return [...ids]
+  }, [draft.cityIds, draft.districtIds, districts.data])
+  // dzielnice są dostępne dopiero po wyborze miasta — tylko dzielnice wybranych miast
+  const visibleDistricts = useMemo(
+    () => (districts.data ?? [])
+      .filter((d) => selectedCityIds.includes(d.cityId))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pl')),
+    [districts.data, selectedCityIds],
+  )
+  const sortedCities = useMemo(
+    () => [...(cities.data ?? [])].sort((a, b) => a.name.localeCompare(b.name, 'pl')),
+    [cities.data],
+  )
   const cityName = (id: number) => cities.data?.find((c) => c.id === id)?.name ?? ''
 
   const apply = () => {
@@ -99,29 +115,34 @@ export function FiltersPanel({ criteria, onApply, onClose }: {
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Miasta</Label>
             <CheckList
-              options={(cities.data ?? []).map((c) => ({ value: c.id, label: c.name }))}
-              selected={draft.cityIds ?? []}
-              onChange={(v) => setDraft((d) => ({
-                ...d,
-                cityIds: v,
-                districtIds: (d.districtIds ?? []).filter((id) => {
+              maxHeight
+              options={sortedCities.map((c) => ({ value: c.id, label: c.name }))}
+              selected={selectedCityIds}
+              onChange={(v) => setDraft((d) => {
+                // dzielnice odznaczonych miast (a przy braku miasta wszystkie) są usuwane z filtra
+                const districtIds = (d.districtIds ?? []).filter((id) => {
                   const district = districts.data?.find((x) => x.id === id)
-                  return !v.length || (district && v.includes(district.cityId))
-                }),
-              }))}
+                  return district !== undefined && v.includes(district.cityId)
+                })
+                return { ...d, cityIds: v.length ? v : undefined, districtIds: districtIds.length ? districtIds : undefined }
+              })}
             />
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Dzielnice</Label>
-            <CheckList
-              maxHeight
-              options={visibleDistricts.map((d) => ({
-                value: d.id,
-                label: (draft.cityIds?.length === 1 ? d.name : `${d.name} (${cityName(d.cityId)})`),
-              }))}
-              selected={draft.districtIds ?? []}
-              onChange={(v) => set('districtIds', v)}
-            />
+            {selectedCityIds.length ? (
+              <CheckList
+                maxHeight
+                options={visibleDistricts.map((d) => ({
+                  value: d.id,
+                  label: (selectedCityIds.length === 1 ? d.name : `${d.name} (${cityName(d.cityId)})`),
+                }))}
+                selected={draft.districtIds ?? []}
+                onChange={(v) => set('districtIds', v.length ? v : undefined)}
+              />
+            ) : (
+              <p className="text-xs text-muted-foreground">Najpierw wybierz miasto.</p>
+            )}
           </div>
           <div className="space-y-1">
             <Label htmlFor="street" className="text-xs text-muted-foreground">Ulica</Label>
