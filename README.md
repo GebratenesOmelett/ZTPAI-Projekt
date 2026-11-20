@@ -479,7 +479,7 @@ Po zakończonym imporcie odświeżane są mediany dzielnic (`district_price_stat
 
 ## Testy
 
-- **Backend: 173 testy** (`./mvnw verify`):
+- **Backend: 172 testy** (`./mvnw verify`):
   - 25 klas testów jednostkowych (JUnit 5, Mockito, AssertJ): harmonogram importów, korekta sprzedaż/najem, wiarygodność ceny i metrażu, parsowanie stron wyników
     wszystkich 11 portali (syntetyczne fikstury, bez sieci), redakcja danych kontaktowych, scoring deduplikacji, trigramy,
     parsery wartości, historia cen i `priceDropped`, cykl życia ofert, blokada równoległego importu,

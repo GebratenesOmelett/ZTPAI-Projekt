@@ -253,12 +253,25 @@ public class DemoUniverse {
         return r.nextDouble() < 0.75 ? 1 : 2 + r.nextInt(6);
     }
 
+    /**
+     * Miasto losowane według wag z {@link DemoPriceTable#CITY_WEIGHTS}. Dane demo powstają tylko dla miast
+     * z tabelą cen demo — pozostałe miasta słownika (np. dodane później) mają wagę 0, a los jest normalizowany
+     * do sumy wag, więc kolejność i liczba miast w słowniku nie zmieniają rozkładu.
+     */
     private static String pickCity(Set<String> available, SplittableRandom r) {
-        double u = r.nextDouble();
+        double total = available.stream().mapToDouble(s -> DemoPriceTable.CITY_WEIGHTS.getOrDefault(s, 0.0)).sum();
+        if (total <= 0) {
+            return available.iterator().next();
+        }
+        double u = r.nextDouble() * total;
         double acc = 0;
         String last = null;
         for (String slug : available) {
-            acc += DemoPriceTable.CITY_WEIGHTS.getOrDefault(slug, 0.05);
+            double weight = DemoPriceTable.CITY_WEIGHTS.getOrDefault(slug, 0.0);
+            if (weight <= 0) {
+                continue;
+            }
+            acc += weight;
             last = slug;
             if (u < acc) {
                 return slug;
