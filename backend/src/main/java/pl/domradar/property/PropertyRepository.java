@@ -30,7 +30,4 @@ public interface PropertyRepository extends JpaRepository<Property, Long> {
     @EntityGraph(attributePaths = {"city", "district"})
     List<Property> findByIdIn(java.util.Collection<Long> ids);
 
-    List<Property> findByFingerprint(String fingerprint);
-
-    long countByStatus(PropertyStatus status);
 }

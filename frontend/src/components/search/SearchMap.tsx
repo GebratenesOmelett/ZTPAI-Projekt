@@ -23,6 +23,9 @@ function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c)
 }
 
+// stała referencja, żeby efekt budujący markery nie uruchamiał się przy każdym renderze podczas ładowania
+const NO_POINTS: MapPoint[] = []
+
 /** Warstwa klastrów (leaflet.markercluster) z etykietami cen. */
 function ClusterLayer({ points, highlightedId }: { points: MapPoint[]; highlightedId?: number | null }) {
   const map = useMap()
@@ -147,7 +150,7 @@ export function SearchMap({ criteria, onChange, highlightedId, className }: {
     queryFn: ({ signal }) => fetchMapPoints(cleaned, signal),
     placeholderData: (prev) => prev,
   })
-  const data = points.data?.points ?? []
+  const data = points.data?.points ?? NO_POINTS
 
   const finishPolygon = () => {
     if (draft.length < 3) {

@@ -118,8 +118,6 @@ public class ListingUpsertService {
                 .filter(o -> !o.getId().equals(offer.getId())).toList();
         if (siblings.isEmpty()) {
             current.setTransactionType(listing.transactionType());
-            current.setFingerprint(PropertyFactory.fingerprint(listing.cityId(), listing.districtId(), listing.propertyType(),
-                    listing.transactionType(), listing.area(), listing.rooms(), listing.floor(), listing.street()));
             return current;
         }
         Property moved = propertyRepository.save(newProperty(listing, now));
@@ -153,14 +151,13 @@ public class ListingUpsertService {
         List<String> currentPhotos = offer.getPhotos().stream().map(Photo::getUrl).toList();
         if (!currentPhotos.equals(n.photos())) {
             offer.replacePhotos(n.photos());
+            changed = true; // główne zdjęcie nieruchomości jest wyznaczane przy przeliczeniu
         }
         return changed;
     }
 
     private Property newProperty(NormalizedListing n, Instant now) {
         Property p = new Property();
-        p.setFingerprint(PropertyFactory.fingerprint(n.cityId(), n.districtId(), n.propertyType(), n.transactionType(),
-                n.area(), n.rooms(), n.floor(), n.street()));
         p.setPropertyType(n.propertyType());
         p.setTransactionType(n.transactionType());
         p.setMarketType(n.marketType());

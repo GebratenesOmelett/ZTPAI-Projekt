@@ -144,7 +144,7 @@ Testy: `cd backend && ./mvnw verify` (wymaga Dockera — Testcontainers) oraz `c
 - sortowanie wielokluczowe: trafność, cena, cena/m², metraż, data dodania, data zmiany ceny, % obniżki,
   dni na rynku, odległość od punktu, % względem mediany dzielnicy,
 - szybki przedział ceny „od – do” nad wynikami; mapę obok listy można zwinąć i wysunąć,
-- fasety z liczebnościami i histogram cen w API (`facets` w odpowiedzi wyszukiwania) — w interfejsie te same wymiary są w panelu filtrów,
+- fasety z liczebnościami i histogram cen w API (`facets=true`, domyślnie) — interfejs ich nie wyświetla (te same wymiary są w panelu filtrów), więc pyta z `facets=false`, co skraca wyszukiwanie ok. 7× (ok. 35 ms zamiast 250 ms na 50 tys. nieruchomości),
 - paginacja `page`/`size` (max 100) z `totalElements` i `totalPages`,
 - przy każdym wyniku: „X% poniżej/powyżej mediany dzielnicy”,
 - widok listy, mapy (klastrowanie) i podzielony; stan filtrów w URL (link do udostępnienia),
@@ -221,7 +221,6 @@ erDiagram
     }
     PROPERTY {
         bigint id PK
-        varchar fingerprint
         varchar property_type
         varchar transaction_type
         varchar market_type
@@ -629,6 +628,13 @@ Kafelki mapy pochodzą z OpenStreetMap (zgodnie z polityką użytkowania kafelk�
   na komputerze (wewnątrz sieci Dockera usługi używają standardowych portów).
 - **Frontend**: stan wyszukiwarki w URL (link do udostępnienia), szkic filtrów zatwierdzany przyciskiem
   (mniej zapytań), porównywarka w `localStorage`, zdjęcia demonstracyjne z picsum.photos.
+- **Mniejszy pakiet startowy frontendu**: strony są ładowane leniwie (`lazy`), a na stronie wyszukiwania dodatkowo
+  mapa (Leaflet), formularz zapisu wyszukiwania (zod + react-hook-form) i klient STOMP (tylko po zalogowaniu)
+  są w osobnych pakietach — główny plik JS zmalał z 864 kB do 404 kB (261 → 123 kB gzip), lista wyników
+  pojawia się bez czekania na bibliotekę map.
+- **Bez nieużywanych danych**: usunięto odcisk nieruchomości (SHA-256 liczony i indeksowany przy każdym zapisie,
+  ale nigdy nieodczytywany — o scaleniu decyduje scoring; migracja `V15`) oraz nieużywane metody repozytoriów
+  i komponenty UI.
 
 ## Wymagania z regulaminu → realizacja w kodzie
 

@@ -215,6 +215,9 @@ class MorePortalsParsingTest {
         assertThat(page.listings()).extracting(RawListing::externalId).containsExactly("6000001", "6000002", "6000003");
         assertThat(page.listings()).extracting(RawListing::city).containsExactly("Gdańsk", "Gdynia", "Gdańsk");
         assertThat(page.listings().get(1).district()).isEqualTo("Orłowo");
+        assertThat(page.listings().get(2).photos()).as("leniwe zdjęcie: data-src zamiast grafiki zastępczej")
+                .containsExactly("https://img.example/tr3.jpg");
+        assertThat(page.listings().get(1).photos()).as("bez zdjęcia — grafika zastępcza nie jest zapisywana").isEmpty();
         RawListing r = page.listings().getFirst();
         assertThat(ValueParsers.parseAmount(r.priceText())).hasValueSatisfying(p -> assertThat(p).isEqualByComparingTo("1165000"));
         assertThat(r.areaText()).isEqualTo("81.35");

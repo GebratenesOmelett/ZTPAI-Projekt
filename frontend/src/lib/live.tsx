@@ -1,4 +1,4 @@
-import { Client, type IMessage, type StompSubscription } from '@stomp/stompjs'
+import type { Client, IMessage, StompSubscription } from '@stomp/stompjs'
 import { useQueryClient } from '@tanstack/react-query'
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
@@ -51,23 +51,8 @@ export function LiveProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!user) return
-    const client = new Client({
-      brokerURL: brokerUrl(),
-      reconnectDelay: 5000,
-      heartbeatIncoming: 0,
-      heartbeatOutgoing: 20000,
-      beforeConnect: async () => {
-        const token = session.token ?? (await refreshAccessToken())
-        client.connectHeaders = { Authorization: `Bearer ${token ?? ''}` }
-      },
-      onConnect: () => {
-        setConnected(true)
-        subscriptionsRef.current.clear()
-        handlersRef.current.forEach((_, destination) => attach(client, destination))
-      },
-      onWebSocketClose: () => setConnected(false),
-      onStompError: () => setConnected(false),
-    })
+    let cancelled = false
+    let client: Client | null = null
     const notificationHandler: Handler = (body) => {
       const n = body as AppNotification
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications })
@@ -80,15 +65,38 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     const set = handlersRef.current.get(destination) ?? new Set<Handler>()
     set.add(notificationHandler)
     handlersRef.current.set(destination, set)
-    clientRef.current = client
-    client.activate()
+    // biblioteka STOMP jest pobierana tylko dla zalogowanych (anonimowy użytkownik nie łączy się z WebSocketem)
+    void import('@stomp/stompjs').then(({ Client: StompClient }) => {
+      if (cancelled) return
+      const stomp: Client = new StompClient({
+        brokerURL: brokerUrl(),
+        reconnectDelay: 5000,
+        heartbeatIncoming: 0,
+        heartbeatOutgoing: 20000,
+        beforeConnect: async () => {
+          const token = session.token ?? (await refreshAccessToken())
+          stomp.connectHeaders = { Authorization: `Bearer ${token ?? ''}` }
+        },
+        onConnect: () => {
+          setConnected(true)
+          subscriptionsRef.current.clear()
+          handlersRef.current.forEach((_, dest) => attach(stomp, dest))
+        },
+        onWebSocketClose: () => setConnected(false),
+        onStompError: () => setConnected(false),
+      })
+      client = stomp
+      clientRef.current = stomp
+      stomp.activate()
+    })
     const subscriptions = subscriptionsRef.current
     return () => {
+      cancelled = true
       set.delete(notificationHandler)
       subscriptions.clear()
       clientRef.current = null
       setConnected(false)
-      void client.deactivate()
+      if (client) void client.deactivate()
     }
   }, [user, attach, queryClient, navigate])
 

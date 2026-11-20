@@ -3,7 +3,6 @@ package db.migration;
 import org.flywaydb.core.api.migration.BaseJavaMigration;
 import org.flywaydb.core.api.migration.Context;
 import pl.domradar.ingestion.normalize.TransactionClassifier;
-import pl.domradar.property.PropertyFactory;
 import pl.domradar.property.PropertyType;
 import pl.domradar.property.TransactionType;
 
@@ -19,12 +18,12 @@ import java.util.List;
  * Jednorazowa korekta danych zaimportowanych przed wprowadzeniem {@link TransactionClassifier}: nieruchomości
  * z ogłoszeń wystawionych w złej kategorii portalu (np. "sprzedaż" za 2500 zł) dostają właściwy rodzaj transakcji.
  * Zmiana następuje tylko wtedy, gdy ceny wszystkich ofert nieruchomości wskazują tę samą, przeciwną kategorię.
- * Przeliczany jest też odcisk (fingerprint) i atrybuty ofert, żeby deduplikacja widziała poprawny rodzaj transakcji.
+ * Aktualizowane są też atrybuty ofert, żeby deduplikacja widziała poprawny rodzaj transakcji.
  */
 public class V13__fix_misclassified_transactions extends BaseJavaMigration {
 
-    private record Candidate(long id, PropertyType type, TransactionType tx, BigDecimal area, Long cityId, Long districtId,
-                             Integer rooms, Integer floor, String street, BigDecimal minPrice, BigDecimal maxPrice) {
+    private record Candidate(long id, PropertyType type, TransactionType tx, BigDecimal area,
+                             BigDecimal minPrice, BigDecimal maxPrice) {
     }
 
     @Override
@@ -33,21 +32,19 @@ public class V13__fix_misclassified_transactions extends BaseJavaMigration {
         List<Candidate> candidates = new ArrayList<>();
         try (Statement st = connection.createStatement();
              ResultSet rs = st.executeQuery("""
-                     SELECT p.id, p.property_type, p.transaction_type, p.area, p.city_id, p.district_id, p.rooms, p.floor,
-                            p.street, min(o.price) AS min_price, max(o.price) AS max_price
+                     SELECT p.id, p.property_type, p.transaction_type, p.area,
+                            min(o.price) AS min_price, max(o.price) AS max_price
                      FROM property p JOIN offer o ON o.property_id = p.id
                      WHERE p.property_type IN ('APARTMENT', 'HOUSE') AND p.area > 0
                      GROUP BY p.id""")) {
             while (rs.next()) {
                 candidates.add(new Candidate(rs.getLong("id"), PropertyType.valueOf(rs.getString("property_type")),
                         TransactionType.valueOf(rs.getString("transaction_type")), rs.getBigDecimal("area"),
-                        rs.getObject("city_id", Long.class), rs.getObject("district_id", Long.class),
-                        rs.getObject("rooms", Integer.class), rs.getObject("floor", Integer.class), rs.getString("street"),
                         rs.getBigDecimal("min_price"), rs.getBigDecimal("max_price")));
             }
         }
         try (PreparedStatement updateProperty = connection.prepareStatement(
-                "UPDATE property SET transaction_type = ?, fingerprint = ? WHERE id = ?");
+                "UPDATE property SET transaction_type = ? WHERE id = ?");
              PreparedStatement updateOffers = connection.prepareStatement(
                      "UPDATE offer SET attributes = jsonb_set(attributes, '{transactionType}', to_jsonb(?::text)) WHERE property_id = ?")) {
             for (Candidate c : candidates) {
@@ -57,9 +54,7 @@ public class V13__fix_misclassified_transactions extends BaseJavaMigration {
                     continue;
                 }
                 updateProperty.setString(1, byMin.name());
-                updateProperty.setString(2, PropertyFactory.fingerprint(c.cityId(), c.districtId(), c.type(), byMin,
-                        c.area(), c.rooms(), c.floor(), c.street()));
-                updateProperty.setLong(3, c.id());
+                updateProperty.setLong(2, c.id());
                 updateProperty.addBatch();
                 updateOffers.setString(1, byMin.name());
                 updateOffers.setLong(2, c.id());

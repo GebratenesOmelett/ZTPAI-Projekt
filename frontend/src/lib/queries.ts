@@ -49,7 +49,8 @@ export function searchProperties(criteria: Criteria, page: number, size: number,
   return api<SearchResponse>('/api/v1/properties/search', {
     method: 'POST',
     body: cleanCriteria(criteria),
-    query: { page, size, sort, facets: true },
+    // fasety nie są wyświetlane (te same wymiary są w panelu filtrów) — backend ich nie liczy
+    query: { page, size, sort, facets: false },
     signal,
   })
 }

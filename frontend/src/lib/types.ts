@@ -108,29 +108,8 @@ export interface PropertySummary {
   distanceMeters?: number
 }
 
-export interface FacetValue {
-  key: string
-  label: string
-  count: number
-}
-
-export interface HistogramBucket {
-  from: number
-  to: number
-  count: number
-}
-
-export interface SearchFacets {
-  districts: FacetValue[]
-  rooms: FacetValue[]
-  propertyTypes: FacetValue[]
-  sources: FacetValue[]
-  priceHistogram: HistogramBucket[]
-}
-
 export interface SearchResponse extends Page<PropertySummary> {
   sort: string[]
-  facets?: SearchFacets
 }
 
 export interface MapPoint {
@@ -217,19 +196,6 @@ export interface PropertyDetails {
   median?: MedianComparison
   version: number
   favoriteId?: number
-}
-
-export interface DistrictStats {
-  districtId: number
-  district: string
-  cityId: number
-  city: string
-  propertyType: PropertyType
-  transactionType: TransactionType
-  medianPricePerM2: number
-  avgPricePerM2: number
-  listingCount: number
-  updatedAt: string
 }
 
 export interface SavedSearch {

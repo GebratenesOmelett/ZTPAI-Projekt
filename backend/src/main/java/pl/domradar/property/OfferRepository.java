@@ -7,7 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,9 +16,6 @@ public interface OfferRepository extends JpaRepository<Offer, Long> {
 
     @EntityGraph(attributePaths = {"source", "priceHistory"})
     List<Offer> findByPropertyIdOrderByPriceAsc(Long propertyId);
-
-    @EntityGraph(attributePaths = {"source"})
-    List<Offer> findByPropertyIdIn(Collection<Long> propertyIds);
 
     List<Offer> findByPropertyId(Long propertyId);
 
@@ -37,6 +33,4 @@ public interface OfferRepository extends JpaRepository<Offer, Long> {
             """)
     Page<Offer> adminSearch(@Param("sourceId") Long sourceId, @Param("propertyId") Long propertyId,
                             @Param("active") Boolean active, Pageable pageable);
-
-    long countByPropertyIdAndActiveTrue(Long propertyId);
 }

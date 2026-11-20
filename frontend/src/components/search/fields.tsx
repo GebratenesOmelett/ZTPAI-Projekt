@@ -1,5 +1,5 @@
 import { ChevronDown } from 'lucide-react'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Input } from '@/components/ui/input'
@@ -17,10 +17,10 @@ export function NumberField({ value, onChange, placeholder, min, step, id, class
   className?: string
   ariaLabel?: string
 }) {
-  const [text, setText] = useState(value === undefined ? '' : String(value))
-  useEffect(() => {
-    setText(value === undefined ? '' : String(value))
-  }, [value])
+  // tekst wpisywany przez użytkownika; gdy wartość zmieni się z zewnątrz (np. "Wyczyść"), pole pokazuje nową wartość
+  // (wyliczane podczas renderu zamiast setState w efekcie — bez dodatkowego renderu)
+  const [draft, setDraft] = useState<{ source?: number; text: string }>({ source: value, text: value === undefined ? '' : String(value) })
+  const text = draft.source === value ? draft.text : value === undefined ? '' : String(value)
   return (
     <Input
       id={id}
@@ -33,9 +33,10 @@ export function NumberField({ value, onChange, placeholder, min, step, id, class
       placeholder={placeholder}
       value={text}
       onChange={(e) => {
-        setText(e.target.value)
         const n = e.target.value === '' ? undefined : Number(e.target.value)
-        onChange(n !== undefined && Number.isFinite(n) ? n : undefined)
+        const parsed = n !== undefined && Number.isFinite(n) ? n : undefined
+        setDraft({ source: parsed, text: e.target.value })
+        onChange(parsed)
       }}
     />
   )

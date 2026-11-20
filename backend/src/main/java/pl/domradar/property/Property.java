@@ -35,9 +35,6 @@ public class Property {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 64)
-    private String fingerprint;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "property_type", nullable = false)
     private PropertyType propertyType;

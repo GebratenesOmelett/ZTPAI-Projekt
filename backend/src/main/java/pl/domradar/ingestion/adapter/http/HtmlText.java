@@ -44,11 +44,4 @@ final class HtmlText {
         }
         return last;
     }
-
-    static String absolute(String base, String href) {
-        if (href == null || href.isBlank()) {
-            return null;
-        }
-        return href.startsWith("http") ? href : base + (href.startsWith("/") ? "" : "/") + href;
-    }
 }

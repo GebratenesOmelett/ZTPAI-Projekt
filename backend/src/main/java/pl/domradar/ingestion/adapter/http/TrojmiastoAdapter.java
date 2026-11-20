@@ -86,7 +86,7 @@ public class TrojmiastoAdapter extends PagedPortalAdapter {
         String district = place.substring(Math.min(city.name().length(), place.length())).trim();
         String url = link.absUrl("href");
         Element logo = card.selectFirst("img.img-logo[title]");
-        Element image = card.selectFirst("img.list__item__img[src]");
+        String photo = photoUrl(card.selectFirst("img.list__item__img"));
         return Optional.of(RawListing.builder()
                 .externalId(HtmlText.lastDigits(url.replaceAll("\\.html.*$", "")))
                 .url(url)
@@ -104,10 +104,24 @@ public class TrojmiastoAdapter extends PagedPortalAdapter {
                 .district(district.isEmpty() ? null : district)
                 .street(street == null || street.isEmpty() ? null : street)
                 .features(List.of())
-                .photos(image == null ? List.of() : List.of(image.absUrl("src")))
+                .photos(photo == null ? List.of() : List.of(photo))
                 .agencyName(logo == null ? null : logo.attr("title"))
                 .sellerText(logo == null ? null : "biuro")
                 .build());
+    }
+
+    /** Zdjęcia dalszych kart są ładowane leniwie: właściwy adres w {@code data-src}, w {@code src} grafika zastępcza. */
+    static String photoUrl(Element img) {
+        if (img == null) {
+            return null;
+        }
+        for (String attr : new String[]{"data-src", "src"}) {
+            String url = img.absUrl(attr);
+            if (!url.isBlank() && !url.contains("placeholder")) {
+                return url;
+            }
+        }
+        return null;
     }
 
     private static String detail(Element card, String key) {

@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, Columns2, List, Map as MapIcon, Search, SlidersHorizontal, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { EmptyState, ErrorState, LoadingState } from '@/components/common/States'
@@ -9,7 +9,6 @@ import { FiltersPanel } from '@/components/search/FiltersPanel'
 import { PriceRangeBar } from '@/components/search/PriceRangeBar'
 import { PropertyCard } from '@/components/search/PropertyCard'
 import { SaveSearchDialog, type EditingSavedSearch } from '@/components/search/SaveSearchDialog'
-import { SearchMap } from '@/components/search/SearchMap'
 import { SortBar } from '@/components/search/SortBar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,6 +18,9 @@ import { activeFilterCount, parseSearchParams, toSearchParams, type Criteria, ty
 import { plural } from '@/lib/format'
 import { searchProperties } from '@/lib/queries'
 import { cn } from '@/lib/utils'
+
+// mapa (Leaflet + klastry) w osobnym pakiecie — lista wyników renderuje się bez czekania na bibliotekę map
+const SearchMap = lazy(() => import('@/components/search/SearchMap').then((m) => ({ default: m.SearchMap })))
 
 type View = 'list' | 'split' | 'map'
 
@@ -60,6 +62,7 @@ export default function SearchPage() {
   const filterCount = activeFilterCount(state.criteria)
   const hasPoint = state.criteria.lat !== undefined && state.criteria.lon !== undefined
   const data = result.data
+  const mapHeight = view === 'map' ? 'h-[calc(100svh-14rem)]' : 'h-[70vh] xl:h-[calc(100svh-6rem)]'
 
   const filters = (close?: () => void) => (
     <FiltersPanel key={JSON.stringify(state.criteria)} criteria={state.criteria} onApply={(criteria) => update({ criteria })} onClose={close} />
@@ -169,8 +172,9 @@ export default function SearchPage() {
                   <ChevronRight />
                 </Button>
               )}
-              <SearchMap criteria={state.criteria} onChange={updateCriteria} highlightedId={highlighted}
-                         className={cn(view === 'map' ? 'h-[calc(100svh-14rem)]' : 'h-[70vh] xl:h-[calc(100svh-6rem)]')} />
+              <Suspense fallback={<div className={cn('rounded-xl border bg-muted/30', mapHeight)} />}>
+                <SearchMap criteria={state.criteria} onChange={updateCriteria} highlightedId={highlighted} className={mapHeight} />
+              </Suspense>
             </div>
           )}
         </div>

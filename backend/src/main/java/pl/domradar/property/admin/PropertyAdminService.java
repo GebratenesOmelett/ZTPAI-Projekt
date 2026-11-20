@@ -76,8 +76,6 @@ public class PropertyAdminService {
             p.getFeatures().clear();
             p.getFeatures().addAll(features);
         }
-        p.setFingerprint(PropertyFactory.fingerprint(location.city().getId(), a.districtId(), a.propertyType(),
-                a.transactionType(), a.area(), a.rooms(), a.floor(), a.street()));
         recalculator.recalculate(p, offers);
         propertyRepository.flush();
         events.publishEvent(new SearchDataChangedEvent("property " + id + " updated"));
@@ -194,8 +192,6 @@ public class PropertyAdminService {
         p.setFirstSeenAt(offer.getFirstSeenAt());
         p.setLastSeenAt(offer.getLastSeenAt());
         p.setStatus(PropertyStatus.ACTIVE);
-        p.setFingerprint(PropertyFactory.fingerprint(p.getCity().getId(), districtId, p.getPropertyType(), p.getTransactionType(),
-                p.getArea(), p.getRooms(), p.getFloor(), p.getStreet()));
         return p;
     }
 

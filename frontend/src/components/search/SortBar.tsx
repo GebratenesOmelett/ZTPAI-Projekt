@@ -2,7 +2,7 @@ import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
-export const SORT_FIELDS: Record<string, string> = {
+const SORT_FIELDS: Record<string, string> = {
   addedAt: 'Data dodania',
   price: 'Cena',
   pricePerM2: 'Cena za m²',
